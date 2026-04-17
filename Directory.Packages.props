@@ -1,0 +1,34 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Build infrastructure -->
+    <PackageVersion Include="MinVer" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.202" />
+
+    <!-- Adapter runtime dependencies -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
+
+    <!-- Core MarketData packages -->
+    <PackageVersion Include="Boutquin.MarketData.Abstractions" Version="1.0.1" />
+    <PackageVersion Include="Boutquin.MarketData.Calendars" Version="1.0.1" />
+    <PackageVersion Include="Boutquin.MarketData.Transport" Version="1.0.1" />
+    <PackageVersion Include="Boutquin.MarketData.Storage" Version="1.0.1" />
+
+    <!-- DI (needed for ServiceCollection in tests) -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+
+    <!-- Test infrastructure -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="FluentAssertions" Version="8.9.0" />
+    <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
+    <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+  </ItemGroup>
+</Project>

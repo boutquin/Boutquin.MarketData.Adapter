@@ -1,0 +1,13 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Cme.CmeOptions
+Boutquin.MarketData.Adapter.Cme.CmeOptions.CmeOptions() -> void
+Boutquin.MarketData.Adapter.Cme.CmeOptions.FilePattern.get -> string!
+Boutquin.MarketData.Adapter.Cme.CmeOptions.FilePattern.set -> void
+Boutquin.MarketData.Adapter.Cme.CmeOptions.SettlementDirectory.get -> string!
+Boutquin.MarketData.Adapter.Cme.CmeOptions.SettlementDirectory.set -> void
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.FuturesSettlementRequest! request) -> bool
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.FuturesSettlementRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.FuturesSettlement!>!>!>!
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.Cme.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.Cme.ServiceCollectionExtensions.AddMarketDataCme(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Cme.CmeOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

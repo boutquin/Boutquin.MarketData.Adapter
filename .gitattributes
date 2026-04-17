@@ -1,0 +1,26 @@
+###############################################################################
+# Set default behavior to automatically normalize line endings.
+###############################################################################
+* text=auto
+
+###############################################################################
+# Exclude private files from git archive (used for public repo squash push)
+###############################################################################
+CLAUDE.md export-ignore
+CLAUDE.local.md export-ignore
+.claude/ export-ignore
+.claude/** export-ignore
+specs/ export-ignore
+specs/** export-ignore
+_local/ export-ignore
+_local/** export-ignore
+hooks/ export-ignore
+hooks/** export-ignore
+review-accepted.yaml export-ignore
+
+###############################################################################
+# behavior for image files
+###############################################################################
+#*.jpg   binary
+#*.png   binary
+#*.gif   binary

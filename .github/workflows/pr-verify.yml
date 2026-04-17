@@ -1,0 +1,82 @@
+name: PR Verify
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    name: PR Verify
+    runs-on: ubuntu-latest
+    # TODO: Enable once Boutquin.MarketData.* packages are published to nuget.org
+    #       (local NuGet feed is not available in CI)
+    if: false
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: dotnet restore
+        run: dotnet restore
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release --no-restore
+
+      - name: dotnet format (whitespace)
+        run: dotnet format whitespace --verify-no-changes
+
+      - name: dotnet format (style)
+        run: dotnet format style --verify-no-changes
+
+      - name: dotnet format (analyzers)
+        run: dotnet format analyzers --verify-no-changes
+
+      - name: Doc quality — prohibited phrase scan
+        run: |
+          MATCHES=$(grep -rn \
+            -e 'Provides the .* functionality and related domain behavior' \
+            -e 'Executes the .* operation for this component' \
+            -e 'The .* input value for the operation' \
+            -e 'Gets or sets the .* for this instance' \
+            --include='*.cs' src/ || true)
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Prohibited documentation phrases found:"
+            echo "$MATCHES"
+            exit 1
+          fi
+
+      - name: Doc quality — low-signal phrase scan
+        run: |
+          MATCHES=$(grep -rn \
+            -e 'Input value for <paramref name=' \
+            -e '/// Executes ' \
+            -e 'Operation result\.' \
+            --include='*.cs' src/ || true)
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Low-signal documentation phrases found:"
+            echo "$MATCHES"
+            exit 1
+          fi
+
+      - name: Doc quality — accessor-verb scan
+        run: |
+          MATCHES=$(grep -rn '/// Gets \w' --include='*.cs' src/ || true)
+          if [ -n "$MATCHES" ]; then
+            echo "::error::Accessor-verb property summaries found (use semantic descriptions instead):"
+            echo "$MATCHES"
+            exit 1
+          fi

@@ -1,0 +1,3 @@
+#nullable enable
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter.NewYorkFedSofrAdapter(Boutquin.MarketData.Transport.Http.IHttpDataTransport! transport, Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

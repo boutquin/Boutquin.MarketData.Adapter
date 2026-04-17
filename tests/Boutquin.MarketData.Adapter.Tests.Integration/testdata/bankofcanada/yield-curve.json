@@ -1,0 +1,16 @@
+{
+  "terms": {
+    "url": "https://www.bankofcanada.ca/valet/terms"
+  },
+  "seriesDetail": {},
+  "observations": [
+    {
+      "d": "2024-01-15",
+      "BD.CDN.ZERO.3M": {"v": "5.01"},
+      "BD.CDN.ZERO.6M": {"v": "4.88"},
+      "BD.CDN.ZERO.1Y": {"v": "4.52"},
+      "BD.CDN.ZERO.2Y": {"v": "3.91"},
+      "BD.CDN.ZERO.5Y": {"v": "3.44"}
+    }
+  ]
+}

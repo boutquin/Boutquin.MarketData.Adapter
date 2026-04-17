@@ -1,0 +1,13 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request) -> bool
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.Ecb.EcbOptions
+Boutquin.MarketData.Adapter.Ecb.EcbOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.Ecb.EcbOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.Ecb.EcbOptions.EcbOptions() -> void
+Boutquin.MarketData.Adapter.Ecb.EcbOptions.EstrSeriesKey.get -> string!
+Boutquin.MarketData.Adapter.Ecb.EcbOptions.EstrSeriesKey.set -> void
+Boutquin.MarketData.Adapter.Ecb.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.Ecb.ServiceCollectionExtensions.AddMarketDataEcb(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Ecb.EcbOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

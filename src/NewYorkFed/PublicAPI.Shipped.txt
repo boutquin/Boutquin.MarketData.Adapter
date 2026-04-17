@@ -1,0 +1,11 @@
+#nullable enable
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions.NewYorkFedOptions() -> void
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request) -> bool
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedSofrAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.NewYorkFed.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.NewYorkFed.ServiceCollectionExtensions.AddMarketDataNewYorkFed(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.NewYorkFed.NewYorkFedOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

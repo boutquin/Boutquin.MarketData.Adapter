@@ -1,0 +1,21 @@
+#nullable enable
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaCorraAdapter
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaCorraAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request) -> bool
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaCorraAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaCorraAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.BankOfCanadaOptions() -> void
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.CorraGroupName.get -> string!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.CorraGroupName.set -> void
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.Currency.get -> string!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.Currency.set -> void
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.GroupName.get -> string!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions.GroupName.set -> void
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaYieldCurveAdapter
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaYieldCurveAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.YieldCurveQuoteRequest! request) -> bool
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaYieldCurveAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.YieldCurveQuoteRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.YieldCurveQuote!>!>!>!
+Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaYieldCurveAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.BankOfCanada.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.BankOfCanada.ServiceCollectionExtensions.AddMarketDataBankOfCanada(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.BankOfCanada.BankOfCanadaOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

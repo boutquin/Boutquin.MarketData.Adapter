@@ -1,0 +1,11 @@
+#nullable enable
+Boutquin.MarketData.Adapter.UsTreasury.ServiceCollectionExtensions
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryOptions
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryOptions.UsTreasuryOptions() -> void
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryYieldAdapter
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryYieldAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.YieldCurveQuoteRequest! request) -> bool
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryYieldAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.YieldCurveQuoteRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.YieldCurveQuote!>!>!>!
+Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryYieldAdapter.Priority.get -> int
+static Boutquin.MarketData.Adapter.UsTreasury.ServiceCollectionExtensions.AddMarketDataUsTreasury(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.UsTreasury.UsTreasuryOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

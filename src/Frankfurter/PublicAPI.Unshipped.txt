@@ -1,0 +1,3 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter.FrankfurterFxAdapter(Boutquin.MarketData.Transport.Http.IHttpDataTransport! transport, Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

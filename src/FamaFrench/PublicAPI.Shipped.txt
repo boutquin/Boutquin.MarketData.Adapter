@@ -1,0 +1,11 @@
+#nullable enable
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchFactorAdapter
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchFactorAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.FactorSeriesRequest! request) -> bool
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchFactorAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.FactorSeriesRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.FactorObservation!>!>!>!
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchFactorAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchOptions
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchOptions.FamaFrenchOptions() -> void
+Boutquin.MarketData.Adapter.FamaFrench.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.FamaFrench.ServiceCollectionExtensions.AddMarketDataFamaFrench(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.FamaFrench.FamaFrenchOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

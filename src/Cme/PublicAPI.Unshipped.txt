@@ -1,0 +1,3 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.CmeSettlementAdapter(Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Cme.CmeOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

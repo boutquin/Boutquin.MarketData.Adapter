@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Boutquin.MarketData.Adapter.Shared</PackageId>
+    <AssemblyName>Boutquin.MarketData.Adapter.Shared</AssemblyName>
+    <RootNamespace>Boutquin.MarketData.Adapter.Shared</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Boutquin.MarketData.Abstractions" />
+    <PackageReference Include="Boutquin.MarketData.Calendars" />
+  </ItemGroup>
+</Project>

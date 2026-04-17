@@ -1,0 +1,11 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.FxHistoryRequest! request) -> bool
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.FxHistoryRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.FxRate!>!>!>!
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterFxAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions.FrankfurterOptions() -> void
+Boutquin.MarketData.Adapter.Frankfurter.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.Frankfurter.ServiceCollectionExtensions.AddMarketDataFrankfurter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Frankfurter.FrankfurterOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

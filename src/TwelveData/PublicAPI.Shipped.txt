@@ -1,0 +1,13 @@
+#nullable enable
+Boutquin.MarketData.Adapter.TwelveData.ServiceCollectionExtensions
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions.ApiKey.get -> string!
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions.ApiKey.set -> void
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions.TwelveDataOptions() -> void
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataPriceBarAdapter
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataPriceBarAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.PriceHistoryRequest! request) -> bool
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataPriceBarAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.PriceHistoryRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.Bar!>!>!>!
+Boutquin.MarketData.Adapter.TwelveData.TwelveDataPriceBarAdapter.Priority.get -> int
+static Boutquin.MarketData.Adapter.TwelveData.ServiceCollectionExtensions.AddMarketDataTwelveData(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.TwelveData.TwelveDataOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

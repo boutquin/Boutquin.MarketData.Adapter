@@ -1,0 +1,3 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.FredEconomicSeriesAdapter(Boutquin.MarketData.Transport.Http.IHttpDataTransport! transport, Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Fred.FredOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

@@ -1,0 +1,13 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Tiingo.ServiceCollectionExtensions
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions.ApiToken.get -> string!
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions.ApiToken.set -> void
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.Tiingo.TiingoOptions.TiingoOptions() -> void
+Boutquin.MarketData.Adapter.Tiingo.TiingoPriceBarAdapter
+Boutquin.MarketData.Adapter.Tiingo.TiingoPriceBarAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.PriceHistoryRequest! request) -> bool
+Boutquin.MarketData.Adapter.Tiingo.TiingoPriceBarAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.PriceHistoryRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.Bar!>!>!>!
+Boutquin.MarketData.Adapter.Tiingo.TiingoPriceBarAdapter.Priority.get -> int
+static Boutquin.MarketData.Adapter.Tiingo.ServiceCollectionExtensions.AddMarketDataTiingo(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Tiingo.TiingoOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

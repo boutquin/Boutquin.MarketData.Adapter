@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Boutquin.MarketData.Abstractions" />
+    <PackageReference Include="Boutquin.MarketData.Calendars" />
+    <PackageReference Include="Boutquin.MarketData.Transport" />
+    <PackageReference Include="Boutquin.MarketData.Storage" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Tiingo\Tiingo.csproj" />
+    <ProjectReference Include="..\..\src\Frankfurter\Frankfurter.csproj" />
+    <ProjectReference Include="..\..\src\Fred\Fred.csproj" />
+    <ProjectReference Include="..\..\src\BankOfCanada\BankOfCanada.csproj" />
+    <ProjectReference Include="..\..\src\NewYorkFed\NewYorkFed.csproj" />
+    <ProjectReference Include="..\..\src\UsTreasury\UsTreasury.csproj" />
+    <ProjectReference Include="..\..\src\BankOfEngland\BankOfEngland.csproj" />
+    <ProjectReference Include="..\..\src\Ecb\Ecb.csproj" />
+    <ProjectReference Include="..\..\src\FamaFrench\FamaFrench.csproj" />
+    <ProjectReference Include="..\..\src\Cme\Cme.csproj" />
+    <ProjectReference Include="..\..\src\TwelveData\TwelveData.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\**\*.cs" LinkBase="Shared" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="testdata\**\*" />
+  </ItemGroup>
+</Project>

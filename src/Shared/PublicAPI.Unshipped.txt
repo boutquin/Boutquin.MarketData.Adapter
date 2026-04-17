@@ -1,0 +1,5 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Shared.AdapterCoverageHelper
+Boutquin.MarketData.Adapter.Shared.GapClassifier
+static Boutquin.MarketData.Adapter.Shared.AdapterCoverageHelper.Compute(Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Boutquin.MarketData.Abstractions.Requests.DateRange! range, Boutquin.MarketData.Abstractions.Requests.DataFrequency frequency, System.Collections.Generic.IReadOnlySet<System.DateOnly>! returnedDates) -> (Boutquin.MarketData.Abstractions.Results.DataCoverage! Coverage, System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Results.DataIssue!>! GapIssues)
+static Boutquin.MarketData.Adapter.Shared.GapClassifier.Classify(Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Boutquin.MarketData.Abstractions.Requests.DateRange! range, System.Collections.Generic.IReadOnlySet<System.DateOnly>! returnedDates) -> System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Results.DataIssue!>!

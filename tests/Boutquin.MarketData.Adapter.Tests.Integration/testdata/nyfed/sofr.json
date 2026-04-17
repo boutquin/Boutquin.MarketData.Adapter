@@ -1,0 +1,7 @@
+{
+  "refRates": [
+    {"effectiveDate": "2024-01-02", "type": "Rate", "percentRate": 5.31},
+    {"effectiveDate": "2024-01-03", "type": "Rate", "percentRate": 5.32},
+    {"effectiveDate": "2024-01-04", "type": "Rate", "percentRate": 5.33}
+  ]
+}

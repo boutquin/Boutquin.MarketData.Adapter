@@ -1,0 +1,15 @@
+#nullable enable
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.EconomicSeriesRequest! request) -> bool
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.EconomicSeriesRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.Fred.FredOptions
+Boutquin.MarketData.Adapter.Fred.FredOptions.ApiKey.get -> string!
+Boutquin.MarketData.Adapter.Fred.FredOptions.ApiKey.set -> void
+Boutquin.MarketData.Adapter.Fred.FredOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.Fred.FredOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.Fred.FredOptions.FredOptions() -> void
+Boutquin.MarketData.Adapter.Fred.FredOptions.NormalizePercentToDecimal.get -> bool
+Boutquin.MarketData.Adapter.Fred.FredOptions.NormalizePercentToDecimal.set -> void
+Boutquin.MarketData.Adapter.Fred.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.Fred.ServiceCollectionExtensions.AddMarketDataFred(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Fred.FredOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

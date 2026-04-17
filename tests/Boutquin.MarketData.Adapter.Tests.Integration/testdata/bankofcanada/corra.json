@@ -1,0 +1,11 @@
+{
+  "terms": {
+    "url": "https://www.bankofcanada.ca/valet/terms"
+  },
+  "seriesDetail": {},
+  "observations": [
+    {"d": "2024-01-02", "CORRA_GRAPH.CORRA": {"v": "4.95"}},
+    {"d": "2024-01-03", "CORRA_GRAPH.CORRA": {"v": "4.96"}},
+    {"d": "2024-01-04", "CORRA_GRAPH.CORRA": {"v": "4.95"}}
+  ]
+}

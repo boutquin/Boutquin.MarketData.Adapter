@@ -1,0 +1,13 @@
+#nullable enable
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions.BankOfEnglandOptions() -> void
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions.BaseUrl.get -> string!
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions.BaseUrl.set -> void
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions.SoniaSeriesCode.get -> string!
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions.SoniaSeriesCode.set -> void
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandSoniaAdapter
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandSoniaAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request) -> bool
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandSoniaAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.OvernightFixingRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandSoniaAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.BankOfEngland.ServiceCollectionExtensions
+static Boutquin.MarketData.Adapter.BankOfEngland.ServiceCollectionExtensions.AddMarketDataBankOfEngland(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.BankOfEngland.BankOfEnglandOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
