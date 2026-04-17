@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-_No unreleased changes yet. See 1.0.0 below for the initial public release._
+## [1.0.2] — 2026-04-17
+
+### Fixed
+
+- `Boutquin.MarketData.Adapter.Shared` was missing from the solution file and therefore not included in the 1.0.1 NuGet publish. Consumers of `Boutquin.MarketData.Adapter.NewYorkFed` or `Boutquin.MarketData.Adapter.UsTreasury` received a restore error (`NU1101`) because those packages declare a transitive dependency on `Boutquin.MarketData.Adapter.Shared >= 1.0.1` which did not exist on NuGet.org. Added `src/Shared/Shared.csproj` to `Boutquin.MarketData.Adapter.slnx`; all packages republish at 1.0.2 with `--skip-duplicate` handling the already-published ones.
+
+## [1.0.1] — 2026-04-17
 
 ## [1.0.0] — 2026-04-17
 

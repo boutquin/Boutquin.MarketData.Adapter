@@ -8,6 +8,7 @@
     <Project Path="src/Frankfurter/Frankfurter.csproj" />
     <Project Path="src/Fred/Fred.csproj" />
     <Project Path="src/NewYorkFed/NewYorkFed.csproj" />
+    <Project Path="src/Shared/Shared.csproj" />
     <Project Path="src/Tiingo/Tiingo.csproj" />
     <Project Path="src/TwelveData/TwelveData.csproj" />
     <Project Path="src/UsTreasury/UsTreasury.csproj" />
