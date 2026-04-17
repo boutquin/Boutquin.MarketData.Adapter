@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BankOfCanada/BankOfCanada.csproj" />
+    <Project Path="src/BankOfEngland/BankOfEngland.csproj" />
+    <Project Path="src/Cme/Cme.csproj" />
+    <Project Path="src/Ecb/Ecb.csproj" />
+    <Project Path="src/FamaFrench/FamaFrench.csproj" />
+    <Project Path="src/Frankfurter/Frankfurter.csproj" />
+    <Project Path="src/Fred/Fred.csproj" />
+    <Project Path="src/NewYorkFed/NewYorkFed.csproj" />
+    <Project Path="src/Tiingo/Tiingo.csproj" />
+    <Project Path="src/TwelveData/TwelveData.csproj" />
+    <Project Path="src/UsTreasury/UsTreasury.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Architecture/Architecture.csproj" />
+    <Project Path="tests/Boutquin.MarketData.Adapter.Tests.Integration/Integration.csproj" />
+    <Project Path="tests/Boutquin.MarketData.Adapter.Tests.Unit/Unit.csproj" />
+  </Folder>
+</Solution>

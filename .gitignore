@@ -380,6 +380,8 @@ specs/
 # JetBrains Rider
 .idea/
 
+# Legacy solution format (repo uses .slnx only)
+*.sln
+
 # macOS
 .DS_Store
-*.slnx
