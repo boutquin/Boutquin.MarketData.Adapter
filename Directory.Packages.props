@@ -10,7 +10,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.202" />
 
     <!-- Adapter runtime dependencies -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
 
@@ -21,7 +21,7 @@
     <PackageVersion Include="Boutquin.MarketData.Storage" Version="1.0.1" />
 
     <!-- DI (needed for ServiceCollection in tests) -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
 
     <!-- Test infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
