@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [2.0.0-rc.20261027.1] — 2026-10-27
+## [2.0.0-rc.20261027.2] — 2026-10-27
 
 - CORRA selects the actual Valet rate series `AVG.INTWO` through explicit `CorraSeriesCode`; Bank of Canada FX/CORRA coverage uses the Canadian statutory calendar. Primary payload and publication-date regressions cover the correction.
 

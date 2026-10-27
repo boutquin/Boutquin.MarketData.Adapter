@@ -37,7 +37,7 @@ See [docs/adapters.md](docs/adapters.md) for per-adapter configuration details, 
 ## Quick Start
 
 ```bash
-dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 2.0.0-rc.20261027.1
+dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 2.0.0-rc.20261027.2
 dotnet add package Boutquin.MarketData.DependencyInjection --version 2.0.0-rc.20261027.3
 ```
 

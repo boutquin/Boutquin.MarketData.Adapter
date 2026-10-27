@@ -24,6 +24,7 @@ def main():
     # so the same four published Storage DLL identities can be inspected independently.
     probe = not (cache / 'boutquin.storage.sourcegenerator/2.0.0').exists()
     if probe:
+        (ROOT / 'artifacts').mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='storage-identity-probe-', dir=ROOT / 'artifacts') as temp:
             path = Path(temp)
             (path / 'Directory.Build.props').write_text('<Project />')

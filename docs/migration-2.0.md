@@ -1,6 +1,6 @@
 # Migrating to 2.0 RC
 
-Install Adapter `2.0.0-rc.20261027.1` with MarketData `2.0.0-rc.20261027.3` on .NET 10. Published Storage 2.0.0 is resolved transitively where needed. All dependencies are available from NuGet.org.
+Install Adapter `2.0.0-rc.20261027.2` with MarketData `2.0.0-rc.20261027.3` on .NET 10. Published Storage 2.0.0 is resolved transitively where needed. All dependencies are available from NuGet.org.
 
 Credential-bearing Tiingo, TwelveData and FRED base URLs must use absolute HTTPS URLs. Cancellation propagates to callers rather than becoming a partial-data result. Price adapters and Frankfurter accept one symbol/pair per direct request; use the kernel to partition batches. Shared utilities are an implementation dependency; provider adapters remain independent of one another.
 
