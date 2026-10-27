@@ -17,7 +17,7 @@ def catalogue_errors(readme, guide, changelog, source):
         section = guide.split('## Tiingo ')[1].split('\n---')[0]
         if f'`{record}`' not in row or f'`{record}`' not in section:
             errors.append(record)
-    if 'TiingoDividendHistoryAdapter' not in changelog.split('## [2.0.0-rc.20261027.2]')[1].split('\n## [')[0]:
+    if 'TiingoDividendHistoryAdapter' not in changelog.split('## [2.0.0-rc.20261027.4]')[1].split('\n## [')[0]:
         errors.append('changelog dividend')
     return errors
 

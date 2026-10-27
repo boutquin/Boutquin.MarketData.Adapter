@@ -6,13 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [2.0.0-rc.20261027.2] — 2026-10-27
+## [2.0.0-rc.20261027.4] — 2026-10-27
 
 - CORRA selects the actual Valet rate series `AVG.INTWO` through explicit `CorraSeriesCode`; Bank of Canada FX/CORRA coverage uses the Canadian statutory calendar. Primary payload and publication-date regressions cover the correction.
 
 ### 2.0 release candidate
 
-- Use published MarketData `2.0.0-rc.20261027.3` and signed Storage `2.0.0` packages from NuGet.org, pinned by source and hash. Qualify cold Linux, macOS and Windows builds and package-only consumers before publishing frozen archives.
+- Use published MarketData `2.0.0-rc.20261027.4` and signed Storage `2.0.0` packages from NuGet.org, pinned by source and hash. Qualify cold Linux, macOS and Windows builds and package-only consumers before publishing frozen archives.
 - **Breaking:** credential-bearing Tiingo, TwelveData and FRED endpoints require an absolute HTTPS base URL. All adapter cancellation exceptions propagate instead of being converted to partial data; callers should handle cancellation separately from data-quality failures.
 - **Breaking:** price adapters and Frankfurter FX require one symbol/pair per direct request because flat canonical records cannot retain multiple owners. Partition batches in the kernel. Unsupported direct requests fail before I/O.
 - Validate provider identity, clip observations to request bounds, select Bank of Canada curve rows chronologically within the lookback, and avoid false no-data errors for expected empty publication days.
@@ -34,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- The kernel's `CurrencyCode` enum was removed in `Boutquin.MarketData.Abstractions` (currency unification); `BankOfCanadaFxAdapter`'s internal CAD/USD series map now keys on the ecosystem-wide `Boutquin.Domain.Currency` enum (`Currency.USD` / `Currency.CAD`) instead. Both enums share identical ISO 4217 numeric backing, so adapter behaviour is unchanged — the swap is confined to a `private static readonly` dictionary and touches no public API surface (no source or binary break for adapter consumers). This RC requires `Boutquin.Domain` `1.0.0` and `Boutquin.MarketData.*` `2.0.0-rc.20261027.3`.
+- The kernel's `CurrencyCode` enum was removed in `Boutquin.MarketData.Abstractions` (currency unification); `BankOfCanadaFxAdapter`'s internal CAD/USD series map now keys on the ecosystem-wide `Boutquin.Domain.Currency` enum (`Currency.USD` / `Currency.CAD`) instead. Both enums share identical ISO 4217 numeric backing, so adapter behaviour is unchanged — the swap is confined to a `private static readonly` dictionary and touches no public API surface (no source or binary break for adapter consumers). This RC requires `Boutquin.Domain` `1.0.0` and `Boutquin.MarketData.*` `2.0.0-rc.20261027.4`.
 - `TiingoPriceBarAdapter.CanHandle` and `TiingoInstrumentMetadataAdapter.CanHandle` now return `false` when the request's `Exchange` hint names a venue outside Tiingo's coverage (Tiingo supports `{ XNYS, XNAS }` — US equities and ETFs only). Requests with `Exchange = null` remain venue-neutral and continue to be handled as before. Closes the 2026-04-19 CA research failure mode where bare 3-letter symbols that collide across venues (`XIC` = iShares S&P/TSX Capped Composite on TSX vs. Cimarex Energy on US markets) were silently served with US data regardless of intent.
 - `TwelveDataPriceBarAdapter.CanHandle` and `TwelveDataInstrumentMetadataAdapter.CanHandle` now return `false` when the request's `Exchange` hint names a venue outside the adapter's declared support set. TwelveData supports `{ XTSE, NEOE, XNYS, XNAS }` — the four venues the current consumer (etfwealthiq) declares. TwelveData covers more global venues commercially; extending the set is an opt-in change so routing precedence never changes silently under a downstream consumer. `Exchange = null` requests are unaffected.
 - All four changes require the 1.1.0 `Boutquin.MarketData.Abstractions` package, which adds `ExchangeCode? Exchange` to every request record.

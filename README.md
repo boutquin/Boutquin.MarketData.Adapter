@@ -1,9 +1,9 @@
 # Boutquin.MarketData.Adapter
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/LICENSE.txt)
 [![Build](https://github.com/boutquin/Boutquin.MarketData.Adapter/actions/workflows/pr-verify.yml/badge.svg)](https://github.com/boutquin/Boutquin.MarketData.Adapter/actions/workflows/pr-verify.yml)
 
-> **2.0 RC:** uses published MarketData `2.0.0-rc.20261027.3` and Storage `2.0.0` from NuGet.org. See [migration](docs/migration-2.0.md) and [build verification](docs/runner-dependencies.md).
+> **2.0 RC:** uses published MarketData `2.0.0-rc.20261027.4` and Storage `2.0.0` from NuGet.org. See [migration](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/docs/migration-2.0.md) and [build verification](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/docs/runner-dependencies.md).
 
 Concrete data source adapters for the [Boutquin.MarketData](https://github.com/boutquin/Boutquin.MarketData) kernel. Each adapter implements `IDataSourceAdapter<TRequest, TRecord>` from `Boutquin.MarketData.Abstractions` and self-registers via an `AddMarketData*()` extension method on `IServiceCollection`. Adapters are standalone NuGet packages — install only the ones you need.
 
@@ -23,7 +23,7 @@ Concrete data source adapters for the [Boutquin.MarketData](https://github.com/b
 | `Boutquin.MarketData.Adapter.FamaFrench` | [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) | `FactorObservation` | Anonymous |
 | `Boutquin.MarketData.Adapter.Cme` | CME Group settlement CSV files | `FuturesSettlement` | File-based |
 
-See [docs/adapters.md](docs/adapters.md) for per-adapter configuration details, rate limits, publication lag notes, and data-quality caveats.
+See [docs/adapters.md](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/docs/adapters.md) for per-adapter configuration details, rate limits, publication lag notes, and data-quality caveats.
 
 ## Design Principles
 
@@ -37,8 +37,8 @@ See [docs/adapters.md](docs/adapters.md) for per-adapter configuration details, 
 ## Quick Start
 
 ```bash
-dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 2.0.0-rc.20261027.2
-dotnet add package Boutquin.MarketData.DependencyInjection --version 2.0.0-rc.20261027.3
+dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 2.0.0-rc.20261027.4
+dotnet add package Boutquin.MarketData.DependencyInjection --version 2.0.0-rc.20261027.4
 ```
 
 Install Fred and NewYorkFed at the same Adapter RC version to run the full example below.
@@ -84,11 +84,11 @@ dotnet format Boutquin.MarketData.Adapter.slnx --verify-no-changes
 
 ### Qualified dependency setup
 
-Use the SDK selected by `global.json` and [runner dependencies](docs/runner-dependencies.md). All packages restore from NuGet.org. `Directory.Packages.props` records the exact kernel version and public source commit; `dependency-source.json` pins signed upstream archives. Never rebuild an accepted package identity.
+Use the SDK selected by `global.json` and [runner dependencies](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/docs/runner-dependencies.md). All packages restore from NuGet.org. `Directory.Packages.props` records the exact kernel version and public source commit; `dependency-source.json` pins signed upstream archives. Never rebuild an accepted package identity.
 
 ## Documentation
 
-- [Adapter Reference](docs/adapters.md) — per-adapter configuration, auth, publication lag, and data-quality notes
+- [Adapter Reference](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/docs/adapters.md) — per-adapter configuration, auth, publication lag, and data-quality notes
 
 ## Disclaimer
 
@@ -98,6 +98,6 @@ Boutquin.MarketData.Adapter is open-source software provided under the Apache 2.
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](LICENSE.txt).
+Licensed under the [Apache License, Version 2.0](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.0-rc.20261027.4/LICENSE.txt).
 
 Copyright (c) 2026 Pierre G. Boutquin. All rights reserved.

@@ -4,9 +4,9 @@
     "net10.0": {
       "Boutquin.MarketData.Abstractions": {
         "type": "Direct",
-        "requested": "[2.0.0-rc.20261027.3, )",
-        "resolved": "2.0.0-rc.20261027.3",
-        "contentHash": "ZxBh7tBVziDO2zBMsgxJwFiFpQMk23SMFmV6IcPRXg+L1vuvpW4H17nQ3vZB/djtlm4nNm0Oji8gea42QjzKdw==",
+        "requested": "[2.0.0-rc.20261027.4, )",
+        "resolved": "2.0.0-rc.20261027.4",
+        "contentHash": "K9oqOdb6GDDhPyCgyqvGjYhek95SBesmQvO2F+5IMFL2hTglVyqYUasHstCCMY3p3SQz8L3A9nrEavI04rJ/Mw==",
         "dependencies": {
           "Boutquin.Domain": "1.0.0",
           "Boutquin.Storage.Domain": "2.0.0"
@@ -14,21 +14,21 @@
       },
       "Boutquin.MarketData.Storage": {
         "type": "Direct",
-        "requested": "[2.0.0-rc.20261027.3, )",
-        "resolved": "2.0.0-rc.20261027.3",
-        "contentHash": "Rp9w204keCpQA7OnU88uDhy/7uOeLng9YFRfgywJO5Hhqz/awRUEVK5PxhyNMxhv7g0RF7RwQFZ10j1jMx99tg==",
+        "requested": "[2.0.0-rc.20261027.4, )",
+        "resolved": "2.0.0-rc.20261027.4",
+        "contentHash": "qew4J1KumTHuGcm/z3xoLCtXHsXSlZQ4OmGlIc5edbIcfJHbsPDZ+Dl3PJ2lxURF3Bgib57gxjueb2i+4vledg==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3",
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.4",
           "Boutquin.Storage.Infrastructure": "2.0.0"
         }
       },
       "Boutquin.MarketData.Transport": {
         "type": "Direct",
-        "requested": "[2.0.0-rc.20261027.3, )",
-        "resolved": "2.0.0-rc.20261027.3",
-        "contentHash": "NqJ1vmvTbwjI9gwDDcdpZsWJrsW9byk6qp6t3+hjQJIMxgJJwXUCOL2aeqdeRXSt1WgOiEHR709THjqvuBPi4A==",
+        "requested": "[2.0.0-rc.20261027.4, )",
+        "resolved": "2.0.0-rc.20261027.4",
+        "contentHash": "v1DJgMS2ubuLrIpJUNCOZ4W6z1af5gQPUeAGmUTRtTowNZB8dH5TBTaG5i1ifp+uEHG8eSu05CEXNP4kJEbiEw==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3",
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.4",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.12",
           "Polly.Core": "8.8.0",
           "Polly.RateLimiting": "8.8.0"
@@ -171,8 +171,8 @@
         "type": "Project",
         "dependencies": {
           "Boutquin.Domain": "[1.0.0, )",
-          "Boutquin.MarketData.Abstractions": "[2.0.0-rc.20261027.3, )",
-          "Boutquin.MarketData.Calendars": "[2.0.0-rc.20261027.3, )"
+          "Boutquin.MarketData.Abstractions": "[2.0.0-rc.20261027.4, )",
+          "Boutquin.MarketData.Calendars": "[2.0.0-rc.20261027.4, )"
         }
       },
       "Boutquin.Domain": {
@@ -183,11 +183,11 @@
       },
       "Boutquin.MarketData.Calendars": {
         "type": "CentralTransitive",
-        "requested": "[2.0.0-rc.20261027.3, )",
-        "resolved": "2.0.0-rc.20261027.3",
-        "contentHash": "+/3NOxeyOB6V+wbl1U9bAVc5N9gNGbi6S02dn8+lAK8Ksj07QBjLfyOU+JM8PIFC9wb4Ae2Qy9LGGTM+i09+uA==",
+        "requested": "[2.0.0-rc.20261027.4, )",
+        "resolved": "2.0.0-rc.20261027.4",
+        "contentHash": "NkvJytMXzQeX7RY/kM34sx2sFrh983TXO6F8UTfjcoVVS9Syo9JmpH3lR+XSbROwfM9/rTOMQjpyBP1bxLeFfw==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3"
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.4"
         }
       }
     }

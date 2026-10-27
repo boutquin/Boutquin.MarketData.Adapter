@@ -5,8 +5,8 @@
       Cross-repo validation identity. Keep the exact published version and update both values from
       the same kernel HEAD; KernelPackageIdentityTests rejects reusable/stale packages.
     -->
-    <MarketDataKernelVersion>2.0.0-rc.20261027.3</MarketDataKernelVersion>
-    <MarketDataKernelCommit>24f23c963adaa72d5858638e764df10e17751de1</MarketDataKernelCommit>
+    <MarketDataKernelVersion>2.0.0-rc.20261027.4</MarketDataKernelVersion>
+    <MarketDataKernelCommit>58622453a1456c9659b34a2a705dad62d867a86d</MarketDataKernelCommit>
   </PropertyGroup>
 
   <ItemGroup>

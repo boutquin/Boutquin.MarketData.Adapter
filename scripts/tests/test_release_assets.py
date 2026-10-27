@@ -29,3 +29,11 @@ class ReleaseAssetTests(unittest.TestCase):
             package.write_bytes(b"changed")
             with self.assertRaisesRegex(ValueError, "Changed release archive"):
                 check.validate(feed, tag, digest, "a" * 40)
+
+class PackagedReadmeTests(unittest.TestCase):
+    def test_file_links_are_absolute_for_nuget_gallery(self):
+        import re
+        readme = (Path(__file__).parents[2] / 'README.md').read_text()
+        targets = re.findall(r'\]\(([^)]+)\)', readme)
+        self.assertTrue(targets)
+        self.assertEqual([], [target for target in targets if not target.startswith(('https://', '#'))])
