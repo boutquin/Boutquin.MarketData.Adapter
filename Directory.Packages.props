@@ -1,34 +1,55 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!--
+      Cross-repo validation identity. Keep the exact published version and update both values from
+      the same kernel HEAD; KernelPackageIdentityTests rejects reusable/stale packages.
+    -->
+    <MarketDataKernelVersion>2.0.0-rc.20261027.3</MarketDataKernelVersion>
+    <MarketDataKernelCommit>24f23c963adaa72d5858638e764df10e17751de1</MarketDataKernelCommit>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Build infrastructure -->
-    <PackageVersion Include="MinVer" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.202" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
 
     <!-- Adapter runtime dependencies -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
 
     <!-- Core MarketData packages -->
-    <PackageVersion Include="Boutquin.MarketData.Abstractions" Version="1.0.1" />
-    <PackageVersion Include="Boutquin.MarketData.Calendars" Version="1.0.1" />
-    <PackageVersion Include="Boutquin.MarketData.Transport" Version="1.0.1" />
-    <PackageVersion Include="Boutquin.MarketData.Storage" Version="1.0.1" />
+    <PackageVersion Include="Boutquin.Domain" Version="1.0.0" />
+    <PackageVersion Include="Boutquin.MarketData.Abstractions" Version="$(MarketDataKernelVersion)" />
+    <PackageVersion Include="Boutquin.MarketData.Calendars" Version="$(MarketDataKernelVersion)" />
+    <PackageVersion Include="Boutquin.MarketData.Transport" Version="$(MarketDataKernelVersion)" />
+    <PackageVersion Include="Boutquin.MarketData.Storage" Version="$(MarketDataKernelVersion)" />
+
+    <!--
+      Kernel composition packages, referenced by the INTEGRATION TEST project only so a test can
+      compose the real pipeline (AddMarketDataKernel) alongside the real adapter registrations and
+      drive a fetch end to end. No shipped adapter package references either one, so the adapter
+      layering is unchanged: adapters still depend only on the four packages above.
+
+      These MUST carry the same version string as every other kernel pin. NuGet publishes
+      one build per version and this repo treats warnings as errors, so a pin at any other version
+      turns NuGet's "resolved a higher version than your floor" notice (NU1603) into a build error
+      across the whole solution.
+    -->
+    <PackageVersion Include="Boutquin.MarketData.Orchestration" Version="$(MarketDataKernelVersion)" />
+    <PackageVersion Include="Boutquin.MarketData.DependencyInjection" Version="$(MarketDataKernelVersion)" />
 
     <!-- DI (needed for ServiceCollection in tests) -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
 
     <!-- Test infrastructure -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="FluentAssertions" Version="8.9.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
   </ItemGroup>
 </Project>

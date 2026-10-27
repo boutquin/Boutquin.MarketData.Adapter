@@ -18,8 +18,7 @@ using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.Requests;
-using Boutquin.MarketData.Calendars.Holidays;
-
+using Boutquin.MarketData.Adapter.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -40,14 +39,15 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         Action<EcbOptions>? configure = null)
     {
+        services.AddOptions<EcbOptions>();
         if (configure is not null)
         {
             services.Configure(configure);
         }
 
-        services.AddKeyedSingleton<IBusinessCalendar>(
+        services.TryAddKeyedSingleton<IBusinessCalendar>(
             "ecb-estr",
-            (_, _) => HolidayCalendarFactory.Create("TARGET"));
+            (_, _) => AdapterCalendarFactory.Create("TARGET"));
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDataSourceAdapter<OvernightFixingRequest, ScalarObservation>, EcbEstrAdapter>());

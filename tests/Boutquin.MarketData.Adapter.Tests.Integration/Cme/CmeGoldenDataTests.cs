@@ -50,11 +50,8 @@ public sealed class CmeGoldenDataTests : IDisposable
     {
         // Arrange — write the golden CSV to a temp directory
         var goldenCsv = GoldenFileHelper.LoadText("testdata/cme/settlements.csv");
-        var csvPath = Path.Combine(_tempDir, "settlements.csv");
+        var csvPath = Path.Combine(_tempDir, "20240115-SR3.csv");
         await File.WriteAllTextAsync(csvPath, goldenCsv);
-
-        // Set the file's last-write time to a date within the request range
-        File.SetLastWriteTimeUtc(csvPath, new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc));
 
         var rawStore = new FakeRawDocumentStore();
         var adapter = new CmeSettlementAdapter(
@@ -76,14 +73,14 @@ public sealed class CmeGoldenDataTests : IDisposable
 
         result.Payload[0].ContractMonth.Should().Be(new ContractMonth("2025-06"));
         result.Payload[0].SettlePrice.Should().Be(97.50m);
-        result.Payload[0].ImpliedRate.Should().Be(2.50m);
+        result.Payload[0].ImpliedRate.Should().Be(0.0250m);
 
         result.Payload[1].ContractMonth.Should().Be(new ContractMonth("2025-09"));
         result.Payload[1].SettlePrice.Should().Be(97.25m);
-        result.Payload[1].ImpliedRate.Should().Be(2.75m);
+        result.Payload[1].ImpliedRate.Should().Be(0.0275m);
 
         result.Payload[2].ContractMonth.Should().Be(new ContractMonth("2025-12"));
         result.Payload[2].SettlePrice.Should().Be(97.00m);
-        result.Payload[2].ImpliedRate.Should().Be(3.00m);
+        result.Payload[2].ImpliedRate.Should().Be(0.0300m);
     }
 }

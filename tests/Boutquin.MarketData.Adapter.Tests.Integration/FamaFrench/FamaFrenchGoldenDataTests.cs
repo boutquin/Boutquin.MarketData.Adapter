@@ -15,6 +15,7 @@
 //
 
 using System.IO.Compression;
+using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
 using Boutquin.MarketData.Adapter.FamaFrench;
@@ -57,25 +58,18 @@ public sealed class FamaFrenchGoldenDataTests
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
         // Assert
-        result.Payload.Should().HaveCount(3);
+        // One FactorObservation per (date, factor) under the current contract: 3 dates × 3 factors.
+        result.Payload.Should().HaveCount(9);
 
-        var obs0 = result.Payload[0];
-        obs0.Date.Should().Be(new DateOnly(2024, 1, 2));
-        obs0.Factors["Mkt-RF"].Should().Be(0.0025m);
-        obs0.Factors["SMB"].Should().Be(0.001m);
-        obs0.Factors["HML"].Should().Be(-0.0005m);
-
-        var obs1 = result.Payload[1];
-        obs1.Date.Should().Be(new DateOnly(2024, 1, 3));
-        obs1.Factors["Mkt-RF"].Should().Be(0.0035m);
-        obs1.Factors["SMB"].Should().Be(0.002m);
-        obs1.Factors["HML"].Should().Be(-0.001m);
-
-        var obs2 = result.Payload[2];
-        obs2.Date.Should().Be(new DateOnly(2024, 1, 4));
-        obs2.Factors["Mkt-RF"].Should().Be(-0.0015m);
-        obs2.Factors["SMB"].Should().Be(0.0005m);
-        obs2.Factors["HML"].Should().Be(0.0002m);
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 2), "Mkt-RF", 0.0025m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 2), "SMB", 0.001m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 2), "HML", -0.0005m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 3), "Mkt-RF", 0.0035m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 3), "SMB", 0.002m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 3), "HML", -0.001m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 4), "Mkt-RF", -0.0015m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 4), "SMB", 0.0005m));
+        result.Payload.Should().Contain(new FactorObservation(new DateOnly(2024, 1, 4), "HML", 0.0002m));
     }
 
     private static byte[] CreateZipFromCsv(string entryName, string csvContent)

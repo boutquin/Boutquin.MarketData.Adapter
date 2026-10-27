@@ -28,7 +28,7 @@ namespace Boutquin.MarketData.Adapter.TwelveData;
 public sealed class TwelveDataOptions
 {
     /// <summary>
-    /// Base URL for the Twelve Data REST API.
+    /// Absolute HTTPS base URL for the Twelve Data REST API. Fetches reject other schemes before sending credentials.
     /// </summary>
     public string BaseUrl { get; set; } = "https://api.twelvedata.com";
 
@@ -36,4 +36,13 @@ public sealed class TwelveDataOptions
     /// API authentication key issued by Twelve Data.
     /// </summary>
     public string ApiKey { get; set; } = string.Empty;
+
+    internal void ValidateEndpoint()
+    {
+        if (!Uri.TryCreate(BaseUrl, UriKind.Absolute, out var endpoint) || endpoint.Scheme != Uri.UriSchemeHttps
+            || !string.IsNullOrEmpty(endpoint.UserInfo) || !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment))
+        {
+            throw new ArgumentException("Twelve Data BaseUrl must be a clean absolute HTTPS endpoint without userinfo, query, or fragment because requests carry an API key.", nameof(BaseUrl));
+        }
+    }
 }

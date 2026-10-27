@@ -1,50 +1,68 @@
-name: Publish to NuGet
+name: Publish qualified RC
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing qualified RC tag (v2.0.0-rc.*)
+        required: true
+        type: string
+      manifest_sha256:
+        description: Independently frozen SHA-256 of package-hashes.json
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ inputs.release_tag }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    name: Publish NuGet packages
+    if: github.repository == 'boutquin/Boutquin.MarketData.Adapter' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v6
+      - name: Validate release inputs
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v2\.0\.0-rc\.[0-9]+(\.[0-9]+)*$ ]]
+          [[ "$MANIFEST_SHA256" =~ ^[0-9a-f]{64}$ ]]
+      - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.release_tag }}
           fetch-depth: 0
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v5
+      - uses: actions/setup-python@v6
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: dotnet restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Pack
-        run: dotnet pack --configuration Release --no-build --output ./nupkg
-
-      - name: Push to NuGet
+          python-version: '3.13'
+      - name: Download frozen release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir release-assets --pattern '*.nupkg' --pattern '*.snupkg' --pattern 'package-hashes.json'
+      - name: Build metadata inspector only
+        run: dotnet build scripts/package-inspector/PackageInspector.csproj -c Release
+      - name: Verify exact qualified package bytes and public source identity
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+        run: python3 scripts/verify-release-assets.py release-assets "$RELEASE_TAG" "$MANIFEST_SHA256"
+      - name: Publish verified packages and symbols
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          for pkg in $(find ./nupkg -name "*.nupkg" ! -name "*.snupkg"); do
-            dotnet nuget push "$pkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-          done
-
-      - name: Push symbol packages
-        continue-on-error: true
-        run: |
-          for pkg in $(find ./nupkg -name "*.snupkg"); do
-            dotnet nuget push "$pkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-          done
+          test -n "$NUGET_API_KEY"
+          dotnet nuget push "release-assets/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push "release-assets/*.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: publication-inspection
+          path: release-assets/publication-inspection.json

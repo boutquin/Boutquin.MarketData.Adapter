@@ -22,7 +22,8 @@ namespace Boutquin.MarketData.Adapter.Fred;
 public sealed class FredOptions
 {
     /// <summary>
-    /// Base URL for the FRED API. Defaults to the official St. Louis Fed endpoint.
+    /// HTTPS base URL for the FRED API. Defaults to the official St. Louis Fed endpoint.
+    /// URLs containing credentials, query strings, fragments, or another scheme are rejected before sending the API key.
     /// </summary>
     public string BaseUrl { get; set; } = "https://api.stlouisfed.org";
 
@@ -33,7 +34,8 @@ public sealed class FredOptions
 
     /// <summary>
     /// When <see langword="true"/>, divides percent-denominated values by 100 to produce decimal form
-    /// (e.g., 5.25% becomes 0.0525). Defaults to <see langword="true"/>.
+    /// (e.g., 5.25% becomes 0.0525). Enable only for percent-denominated series.
+    /// Defaults to <see langword="false"/> because FRED also serves non-percent series.
     /// </summary>
-    public bool NormalizePercentToDecimal { get; set; } = true;
+    public bool NormalizePercentToDecimal { get; set; }
 }

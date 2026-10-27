@@ -78,7 +78,7 @@ Open an issue describing:
    dotnet format Boutquin.MarketData.Adapter.slnx --verify-no-changes
    ```
 
-   > **Note:** The `pr-verify.yml` CI job is currently disabled because `Boutquin.MarketData.*` kernel packages are not yet published to nuget.org. Run the gate locally before opening a PR.
+   > Restore the pinned private dependencies using [dependency setup](docs/runner-dependencies.md). CI runs this gate on Linux, macOS and Windows using a fresh cache and verified original archives.
 
 9. **Push and open a pull request**.
 
@@ -101,7 +101,7 @@ Each adapter must:
 - Set `DataProvenance.DataDate` to the actual business date of the data served (not the wall-clock date of the fetch).
 - Emit a `DataIssue` with code `IssueCode.StaleData` or appropriate code when the actual data date differs from the requested date.
 - Self-register via `AddMarketData<ProviderName>()` on `IServiceCollection`.
-- Not depend on any other adapter package — only kernel packages (`Abstractions`, `Transport`, `Storage`).
+- Depend only on the kernel infrastructure and `Adapter.Shared`; never on another provider adapter.
 
 Add an entry to `docs/adapters.md` and the adapter table in `README.md`.
 
@@ -116,9 +116,9 @@ Add an entry to `docs/adapters.md` and the adapter table in `README.md`.
 
 ### C# Style Guide
 
-- Follow the conventions documented in `CLAUDE.md` and `.editorconfig` at the repository root.
+- Follow `.editorconfig` at the repository root and the documentation and data-correctness guidance below.
 - Public types are `sealed` unless they are interfaces or records (enforced by architecture tests).
-- No adapter package may depend on another adapter package — each depends only on kernel packages.
+- Provider adapters may depend on `Adapter.Shared` and kernel infrastructure, never on another provider adapter.
 - No adapter package may depend on `Boutquin.Analytics`, `Boutquin.Trading`, or `Boutquin.OptionPricing`.
 - Litmus test for any new type: "Does this belong in the kernel (`Boutquin.MarketData`) or in this adapter?" Only provider-specific parsing, authentication, and URL construction belong here.
 

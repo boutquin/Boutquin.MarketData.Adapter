@@ -1,49 +1,111 @@
 name: PR Verify
 
 on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact source revision to qualify (empty uses the workflow revision)
+        required: false
+        type: string
   pull_request:
     branches: ["main"]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: PR Verify
-    runs-on: ubuntu-latest
-    # TODO: Enable once Boutquin.MarketData.* packages are published to nuget.org
-    #       (local NuGet feed is not available in CI)
-    if: false
+    name: PR Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Enable long paths for preserved private evidence on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ inputs.source_ref || github.sha }}
+
+      - name: Record qualified source revision
+        run: git rev-parse HEAD
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v5
+      - uses: actions/setup-python@v6
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          python-version: '3.13'
+
+      - name: Initialize cold NuGet directories
+        run: |
+          DEPENDENCY_PACKAGES_PATH="$RUNNER_TEMP/nuget-packages-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          DEPENDENCY_HTTP_CACHE_PATH="$RUNNER_TEMP/nuget-http-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir "$DEPENDENCY_PACKAGES_PATH" "$DEPENDENCY_HTTP_CACHE_PATH"
+          echo "NUGET_PACKAGES=$DEPENDENCY_PACKAGES_PATH" >> "$GITHUB_ENV"
+          echo "NUGET_HTTP_CACHE_PATH=$DEPENDENCY_HTTP_CACHE_PATH" >> "$GITHUB_ENV"
+
+      - name: Verify dependency bytes and identities
+        run: python3 scripts/check-runner-dependencies.py
 
       - name: dotnet restore
-        run: dotnet restore
+        run: dotnet restore Boutquin.MarketData.Adapter.slnx --configfile nuget.ci.config --locked-mode --no-http-cache -p:_WorkloadLibraryPacksFolder="$RUNNER_TEMP/absent-sdk-feed"
+
+      - name: Verify resolved dependency provenance
+        run: python3 scripts/check-runner-dependencies.py --packages "$NUGET_PACKAGES"
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build Boutquin.MarketData.Adapter.slnx --configuration Release --no-restore
+
+      - name: Verify dependency DLL identities
+        run: python3 scripts/verify-dependency-identities.py --packages "$NUGET_PACKAGES" --outputs . --report coverage/dependency-identities.json
+
+      - name: Verify packaged XML documentation
+        run: |
+          python3 scripts/check-package-docs.py --self-test
+          dotnet pack Boutquin.MarketData.Adapter.slnx --configuration Release --no-build --no-restore --output ./artifacts/doc-packages
+          python3 scripts/check-package-docs.py ./artifacts/doc-packages
+
+      - name: dotnet test with coverage
+        run: dotnet test Boutquin.MarketData.Adapter.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --logger trx --blame-hang-timeout 5m --results-directory ./coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report-${{ matrix.os }}
+          path: coverage/
+        if: always()
 
       - name: dotnet format (whitespace)
-        run: dotnet format whitespace --verify-no-changes
+        run: dotnet format whitespace Boutquin.MarketData.Adapter.slnx --verify-no-changes --no-restore
 
       - name: dotnet format (style)
-        run: dotnet format style --verify-no-changes
+        run: dotnet format style Boutquin.MarketData.Adapter.slnx --verify-no-changes --no-restore
 
       - name: dotnet format (analyzers)
-        run: dotnet format analyzers --verify-no-changes
+        run: dotnet format analyzers Boutquin.MarketData.Adapter.slnx --verify-no-changes --no-restore
+
+      - name: Verify RC archive checks
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
+      - name: Verify explicit solution commands
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          python3 scripts/check-verification-workflow.py --self-test
+          python3 scripts/check-verification-workflow.py .github/workflows/pr-verify.yml
 
       - name: Doc quality — prohibited phrase scan
         run: |

@@ -14,7 +14,6 @@
 //  limitations under the License.
 //
 
-using System.Globalization;
 using System.Text.Json;
 
 using Boutquin.MarketData.Abstractions.Contracts;
@@ -40,6 +39,8 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 /// Each symbol is fetched individually. Per-symbol failures (including 404 Not Found)
 /// are caught, logged as warnings, and recorded as <see cref="DataIssue"/> entries —
 /// the adapter continues with the remaining symbols.
+/// Tiingo's <c>startDate</c> describes price-history availability, so it does not populate
+/// <see cref="InstrumentMetadata.InceptionDate"/> (the date the instrument began trading).
 /// </remarks>
 public sealed class TiingoInstrumentMetadataAdapter
     : IDataSourceAdapter<InstrumentMetadataRequest, InstrumentMetadata>, IPrioritizedAdapter
@@ -67,21 +68,51 @@ public sealed class TiingoInstrumentMetadataAdapter
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>tiingo</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("tiingo");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(InstrumentMetadataRequest request) =>
-        request.Symbols.Count > 0;
+    /// <summary>
+    /// Listing venues Tiingo's metadata endpoint covers for this adapter's role in the
+    /// orchestrator: US equities and ETFs only. See <see cref="TiingoPriceBarAdapter"/>
+    /// for the CA research regression this filter prevents.
+    /// </summary>
+    private static readonly IReadOnlySet<ExchangeCode> s_supportedExchanges =
+        new HashSet<ExchangeCode> { ExchangeCode.XNYS, ExchangeCode.XNAS };
 
-    /// <inheritdoc />
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Metadata requests with symbols on a supported US venue, or with no venue hint.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(InstrumentMetadataRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Symbols.Count > 0
+            && (request.Exchange is null || s_supportedExchanges.Contains(request.Exchange.Value));
+    }
+
+    /// <summary>Retrieves instrument metadata for the requested symbols from Tiingo.</summary>
+    /// <param name="request">Metadata requests with symbols on a supported US venue, or with no venue hint.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<InstrumentMetadata>>> FetchAsync(
         InstrumentMetadataRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Tiingo metadata fetches require a supported venue.", nameof(request));
+        }
+
+        TiingoTickerValidator.ThrowIfInvalid(request.Symbols, nameof(request));
+        _options.ValidateEndpoint();
+
         var results = new List<InstrumentMetadata>();
         var issues = new List<DataIssue>();
         var provenanceList = new List<DataProvenance>();
@@ -106,9 +137,27 @@ public sealed class TiingoInstrumentMetadataAdapter
                 await _rawStore.SaveAsync(rawKey, json, cancellationToken).ConfigureAwait(false);
 
                 var meta = ParseMetadata(json);
-                if (meta is not null)
+                if (meta is not null && !string.Equals(meta.Symbol.Ticker, symbol.Ticker, StringComparison.OrdinalIgnoreCase))
+                {
+                    issues.Add(new DataIssue(new IssueCode("TICKER_MISMATCH"), IssueSeverity.Warning,
+                        $"Tiingo returned metadata for a different symbol than '{symbol}'."));
+                }
+                else if (meta is not null && request.Exchange is not null && meta.Exchange != request.Exchange.Value)
+                {
+                    issues.Add(new DataIssue(new IssueCode("EXCHANGE_MISMATCH"), IssueSeverity.Warning,
+                        $"Tiingo returned metadata for a different exchange than '{request.Exchange.Value}'."));
+                }
+                else if (meta is not null)
                 {
                     results.Add(meta);
+                    provenanceList.Add(new DataProvenance(
+                        Provider: new ProviderCode("tiingo"),
+                        Dataset: symbol.Ticker,
+                        LicenseFlag: LicenseType.Free,
+                        RetrievalMode: RetrievalMode.Api,
+                        Freshness: FreshnessClass.EndOfDay,
+                        RetrievedAtUtc: _clock.UtcNow,
+                        SourceUrl: url));
                 }
                 else
                 {
@@ -118,14 +167,6 @@ public sealed class TiingoInstrumentMetadataAdapter
 
                 _logger.LogInformation("Fetched metadata for {Symbol} from Tiingo", symbol);
 
-                provenanceList.Add(new DataProvenance(
-                    Provider: new ProviderCode("tiingo"),
-                    Dataset: symbol.Ticker,
-                    LicenseFlag: LicenseType.Free,
-                    RetrievalMode: RetrievalMode.Api,
-                    Freshness: FreshnessClass.EndOfDay,
-                    RetrievedAtUtc: _clock.UtcNow,
-                    SourceUrl: url));
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -133,11 +174,15 @@ public sealed class TiingoInstrumentMetadataAdapter
                 issues.Add(new DataIssue(new IssueCode("NOT_FOUND"), IssueSeverity.Warning,
                     $"Tiingo returned 404 for symbol '{symbol}'."));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch metadata for {Symbol} from Tiingo", symbol);
+                _logger.LogWarning("Failed to fetch metadata for {Symbol} from Tiingo ({ExceptionType})", symbol, ex.GetType().Name);
                 issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Warning,
-                    $"Failed to fetch metadata for symbol '{symbol}': {ex.Message}"));
+                    $"Failed to fetch metadata for symbol '{symbol}'."));
             }
         }
 
@@ -167,31 +212,29 @@ public sealed class TiingoInstrumentMetadataAdapter
         }
 
         var ticker = root.TryGetProperty("ticker", out var t) ? t.GetString() ?? "" : "";
-        var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-        var exchange = root.TryGetProperty("exchangeCode", out var e) ? e.GetString() ?? "" : "";
-        var description = root.TryGetProperty("description", out var d) ? d.GetString() : null;
-
-        DateOnly? inceptionDate = null;
-        if (root.TryGetProperty("startDate", out var sd) && sd.ValueKind == JsonValueKind.String)
+        if (string.IsNullOrWhiteSpace(ticker))
         {
-            var dateStr = sd.GetString();
-            if (dateStr is not null && DateOnly.TryParse(dateStr.AsSpan(0, Math.Min(10, dateStr.Length)),
-                CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-            {
-                inceptionDate = parsed;
-            }
+            return null;
         }
 
+        var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+        var exchange = root.TryGetProperty("exchangeCode", out var e) ? e.GetString() ?? "" : "";
+        if (!Enum.TryParse<ExchangeCode>(exchange, ignoreCase: true, out var exchangeCode) ||
+            !Enum.IsDefined(exchangeCode) ||
+            !string.Equals(exchange, exchangeCode.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var description = root.TryGetProperty("description", out var d) ? d.GetString() : null;
+
         return new InstrumentMetadata(
-            new Symbol(string.IsNullOrWhiteSpace(ticker) ? "UNKNOWN" : ticker),
+            new Symbol(ticker),
             name,
-            ParseExchangeCode(exchange),
+            exchangeCode,
             AssetClassCode.Equities,
             null,
-            inceptionDate,
+            null,
             description);
     }
-
-    private static ExchangeCode ParseExchangeCode(string exchange) =>
-        Enum.TryParse<ExchangeCode>(exchange, ignoreCase: true, out var code) ? code : ExchangeCode.XNAS;
 }

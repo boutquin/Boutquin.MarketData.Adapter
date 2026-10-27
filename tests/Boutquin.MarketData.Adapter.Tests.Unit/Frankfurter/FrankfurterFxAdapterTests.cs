@@ -14,14 +14,16 @@
 //  limitations under the License.
 //
 
+using Boutquin.Domain.Enumerations;
 using Boutquin.MarketData.Abstractions.Calendars;
+using Boutquin.MarketData.Abstractions.Diagnostics;
+using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.Requests;
+using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Adapter.Frankfurter;
 using Boutquin.MarketData.Adapter.Tests.Shared;
 using Boutquin.MarketData.Calendars;
-using Boutquin.MarketData.Abstractions.Provenance;
-using Boutquin.MarketData.Abstractions.ReferenceData;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -62,22 +64,24 @@ public sealed class FrankfurterFxAdapterTests
     [Fact]
     public void CanHandle_returns_true_for_daily_with_pairs()
     {
-        var request = new FxHistoryRequest([new FxPair(CurrencyCode.EUR, CurrencyCode.USD)], MakeRange(), DataFrequency.Daily);
+        var request = new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], MakeRange(), DataFrequency.Daily);
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
     [Fact]
     public void CanHandle_returns_false_for_non_daily_frequency()
     {
-        var request = new FxHistoryRequest([new FxPair(CurrencyCode.EUR, CurrencyCode.USD)], MakeRange(), DataFrequency.Weekly);
+        var request = new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], MakeRange(), DataFrequency.Weekly);
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
     [Fact]
-    public void CanHandle_returns_false_for_empty_pairs()
+    public void Empty_pairs_are_rejected_at_the_request_boundary()
     {
-        var request = new FxHistoryRequest([], MakeRange(), DataFrequency.Daily);
-        CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
+        Action act = () => new FxHistoryRequest([], MakeRange(), DataFrequency.Daily);
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .Which.ParamName.Should().Be("pairs.Count");
     }
 
     [Fact]
@@ -92,36 +96,59 @@ public sealed class FrankfurterFxAdapterTests
         var rawStore = new FakeRawDocumentStore();
         var adapter = CreateAdapter(transport, rawStore);
 
-        var request = new FxHistoryRequest([new FxPair(CurrencyCode.EUR, CurrencyCode.USD)], MakeRange());
+        var request = new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], MakeRange());
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
         result.Payload.Should().HaveCount(2);
         result.Payload[0].Date.Should().Be(new DateOnly(2024, 1, 2));
-        result.Payload[0].BaseCurrency.Should().Be(CurrencyCode.EUR);
-        result.Payload[0].QuoteCurrency.Should().Be(CurrencyCode.USD);
         result.Payload[0].Rate.Should().Be(1.0844m);
         result.Payload[1].Rate.Should().Be(1.0856m);
     }
 
     [Fact]
-    public async Task FetchAsync_continues_on_per_pair_failure()
+    public async Task FetchAsync_records_a_single_pair_failure()
     {
-        var json = """
-            {"rates":{"2024-01-02":{"GBP":0.8601}}}
-            """;
-
         var transport = new FakeHttpDataTransport();
-        transport.RespondTo("GBP", json);
         // No response for USD pair — will throw
         var adapter = CreateAdapter(transport);
 
         var request = new FxHistoryRequest(
-            [new FxPair(CurrencyCode.EUR, CurrencyCode.USD), new FxPair(CurrencyCode.EUR, CurrencyCode.GBP)],
+            [new FxPair(Currency.EUR, Currency.USD)],
             MakeRange());
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
-        result.Payload.Should().HaveCount(1);
-        result.Issues.Should().NotBeEmpty();
+        result.Payload.Should().BeEmpty();
+        result.Issues.Should().ContainSingle(i => i.Code == new IssueCode("FETCH_FAILED") && i.Severity == IssueSeverity.Error);
+    }
+
+    [Fact]
+    public async Task FetchAsync_fx_propagates_caller_cancellation()
+    {
+        using var source = new CancellationTokenSource();
+        source.Cancel();
+        var transport = new FakeHttpDataTransport();
+        transport.ThrowOnNext(new OperationCanceledException(source.Token));
+        var adapter = CreateAdapter(transport);
+
+        Func<Task> act = () => adapter.FetchAsync(new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.USD)], MakeRange()), source.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchAsync_single_pair_coverage_counts_its_own_gaps()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondDynamic(_ => true, uri => uri.Query.Contains("symbols=USD", StringComparison.Ordinal)
+            ? """{"rates":{"2024-01-08":{"USD":1},"2024-01-09":{"USD":1},"2024-01-10":{"USD":1},"2024-01-11":{"USD":1},"2024-01-12":{"USD":1}}}"""
+            : """{"rates":{"2024-01-08":{"GBP":1}}}""");
+        var result = await CreateAdapter(transport).FetchAsync(new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.GBP)],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12))));
+
+        result.Coverage.RequestedPoints.Should().Be(5);
+        result.Coverage.ReturnedPoints.Should().Be(1);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Partial);
     }
 
     [Fact]
@@ -132,9 +159,144 @@ public sealed class FrankfurterFxAdapterTests
         transport.RespondTo("frankfurter", json);
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new FxHistoryRequest([new FxPair(CurrencyCode.EUR, CurrencyCode.USD)], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], MakeRange()), CancellationToken.None);
 
         result.Provenance.Should().ContainSingle();
         result.Provenance[0].Provider.Should().Be(new ProviderCode("frankfurter"));
+    }
+
+    // ---------- Outgoing request URL ----------
+    // Every other test in this class stubs the transport on a URL substring, which matches a
+    // stale endpoint as readily as a live one. These pin the full URL, so a drift in the default
+    // endpoint or in the path shape fails here instead of surfacing as FETCH_FAILED in production.
+    // The unversioned path (https://api.frankfurter.dev/{from}..{to}) answers HTTP 404; the
+    // service only serves the time-series route under /v1.
+
+    [Fact]
+    public async Task FetchAsync_with_default_options_requests_versioned_time_series_url()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("frankfurter", """{"rates":{"2001-05-21":{"CAD":1.5344}}}""");
+        var adapter = CreateAdapter(transport);
+
+        var request = new FxHistoryRequest(
+            [new FxPair(Currency.USD, Currency.CAD)],
+            new DateRange(new DateOnly(2001, 5, 21), new DateOnly(2001, 6, 1)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        transport.RequestedUris.Should().ContainSingle()
+            .Which.AbsoluteUri.Should().Be("https://api.frankfurter.dev/v1/2001-05-21..2001-06-01?base=USD&symbols=CAD");
+        result.Provenance.Should().ContainSingle()
+            .Which.SourceUrl.Should().Be("https://api.frankfurter.dev/v1/2001-05-21..2001-06-01?base=USD&symbols=CAD");
+    }
+
+    [Fact]
+    public void Default_BaseUrl_is_the_versioned_endpoint() =>
+        new FrankfurterOptions().BaseUrl.Should().Be("https://api.frankfurter.dev/v1");
+
+    [Theory]
+    [InlineData("https://fx.example.test/v1")]
+    [InlineData("https://fx.example.test/v1/")]
+    public async Task FetchAsync_appends_time_series_path_to_configured_BaseUrl(string baseUrl)
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("fx.example.test", """{"rates":{"2024-01-02":{"USD":1.08}}}""");
+        var adapter = CreateAdapter(transport, options: new FrankfurterOptions { BaseUrl = baseUrl });
+
+        await adapter.FetchAsync(new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], MakeRange()), CancellationToken.None);
+
+        transport.RequestedUris.Should().ContainSingle()
+            .Which.AbsoluteUri.Should().Be("https://fx.example.test/v1/2024-01-01..2024-01-31?base=EUR&symbols=USD");
+    }
+
+    // ---------- Calendar-aware coverage (feature-calendar-aware-coverage) ----------
+    // Frankfurter uses WeekendOnlyCalendar — TARGET publishes on weekdays; the API already
+    // pre-filters to published days, but the adapter still computes coverage against the
+    // full business-day expectation for consumer diagnostics.
+
+    [Fact]
+    public async Task FetchAsync_business_day_range_reports_complete_coverage()
+    {
+        var json = """
+            {"rates":{
+              "2024-01-08":{"USD":1.08},"2024-01-09":{"USD":1.08},"2024-01-10":{"USD":1.08},
+              "2024-01-11":{"USD":1.08},"2024-01-12":{"USD":1.08}}}
+            """;
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("frankfurter", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.USD)],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(5);
+        result.Coverage.ReturnedPoints.Should().Be(5);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_weekend_only_range_reports_no_unexpected_gaps()
+    {
+        var json = """{"rates":{}}""";
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("frankfurter", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.USD)],
+            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(0);
+        result.Coverage.CoverageRatio.Should().Be(1.0m);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_missing_business_day_emits_unexpected_gap()
+    {
+        var json = """
+            {"rates":{
+              "2024-01-08":{"USD":1.08},"2024-01-09":{"USD":1.08},"2024-01-10":{"USD":1.08}}}
+            """;
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("frankfurter", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.USD)],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.Status.Should().Be(CompletenessStatus.Partial);
+        var gaps = result.Issues.Where(i => i.Code == new IssueCode("UNEXPECTED_GAP")).ToList();
+        gaps.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task FetchAsync_excludes_rates_outside_requested_range_from_payload_and_coverage()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("frankfurter", """
+            {"rates":{"2024-01-01":{"USD":1.1},"2024-01-02":{"USD":1.2},"2024-01-05":{"USD":1.3}}}
+            """);
+        var request = new FxHistoryRequest(
+            [new FxPair(Currency.EUR, Currency.USD)],
+            new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)));
+
+        var result = await CreateAdapter(transport).FetchAsync(request);
+
+        result.Payload.Should().ContainSingle().Which.Date.Should().Be(new DateOnly(2024, 1, 2));
+        result.Coverage.RequestedPoints.Should().Be(3);
+        result.Coverage.ReturnedPoints.Should().Be(1);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Partial);
+        result.Issues.Count(i => i.Code == new IssueCode("UNEXPECTED_GAP")).Should().Be(2);
     }
 }

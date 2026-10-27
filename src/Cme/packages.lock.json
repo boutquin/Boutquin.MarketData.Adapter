@@ -1,0 +1,195 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "Boutquin.MarketData.Abstractions": {
+        "type": "Direct",
+        "requested": "[2.0.0-rc.20261027.3, )",
+        "resolved": "2.0.0-rc.20261027.3",
+        "contentHash": "ZxBh7tBVziDO2zBMsgxJwFiFpQMk23SMFmV6IcPRXg+L1vuvpW4H17nQ3vZB/djtlm4nNm0Oji8gea42QjzKdw==",
+        "dependencies": {
+          "Boutquin.Domain": "1.0.0",
+          "Boutquin.Storage.Domain": "2.0.0"
+        }
+      },
+      "Boutquin.MarketData.Storage": {
+        "type": "Direct",
+        "requested": "[2.0.0-rc.20261027.3, )",
+        "resolved": "2.0.0-rc.20261027.3",
+        "contentHash": "Rp9w204keCpQA7OnU88uDhy/7uOeLng9YFRfgywJO5Hhqz/awRUEVK5PxhyNMxhv7g0RF7RwQFZ10j1jMx99tg==",
+        "dependencies": {
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3",
+          "Boutquin.Storage.Infrastructure": "2.0.0"
+        }
+      },
+      "Boutquin.MarketData.Transport": {
+        "type": "Direct",
+        "requested": "[2.0.0-rc.20261027.3, )",
+        "resolved": "2.0.0-rc.20261027.3",
+        "contentHash": "NqJ1vmvTbwjI9gwDDcdpZsWJrsW9byk6qp6t3+hjQJIMxgJJwXUCOL2aeqdeRXSt1WgOiEHR709THjqvuBPi4A==",
+        "dependencies": {
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.12",
+          "Polly.Core": "8.8.0",
+          "Polly.RateLimiting": "8.8.0"
+        }
+      },
+      "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
+        "type": "Direct",
+        "requested": "[5.6.0, )",
+        "resolved": "5.6.0",
+        "contentHash": "W4kJGezNIKLzo0Ak5FAQDFvkMf2U7DtGL4THmHyRSApfKsKt5V+eX/bU0ZLKAt/uf9Bb2o1bi0YDKj/GRB/vYQ=="
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "9/qymSh7hVDMGTGwrLz8MRp5zRyXy9adGDOs4HwRdnLil3oZGYuWeZjbmHgCQ9BL1qBroVfgUK3U/nb61617Cw=="
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "+24lC4plfbEDNfLAdTV/SWKS7dW+16X4HdydO3R++134kSNTzcbYA4KpR1Hdh6uWisB8Za3AzwyOn+K+NxWIug==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12"
+        }
+      },
+      "Microsoft.Extensions.Options": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "TDYD33TSRpXKZWlmTXNlj5kCihxatmv2Ec1u6C+bMYLphCS7PoSLE9Pjd/nunDoE7yETk+LLKjVJX78HYtWjpA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12",
+          "Microsoft.Extensions.Primitives": "10.0.12"
+        }
+      },
+      "Microsoft.SourceLink.GitHub": {
+        "type": "Direct",
+        "requested": "[10.0.401, )",
+        "resolved": "10.0.401",
+        "contentHash": "LGmlwgP1Cx37JEWzyjS0o1/+xs/s/e3E2TBSuogI5ePA/9L0pfIfeYX0k5in7Bfcw8Nn2y2sG9jXxydTjiR2Fg==",
+        "dependencies": {
+          "Microsoft.Build.Tasks.Git": "10.0.401",
+          "Microsoft.SourceLink.Common": "10.0.401",
+          "System.IO.Hashing": "10.0.12"
+        }
+      },
+      "MinVer": {
+        "type": "Direct",
+        "requested": "[8.0.0, )",
+        "resolved": "8.0.0",
+        "contentHash": "AJy/KVjXgUbgjf6HiI8wAk4DSSq0SCmvXQF8aU6IB+pnIQq+YJvofvMczug2hqO8yEvnQY557ryew66KPpyCsA=="
+      },
+      "Boutquin.Storage.Domain": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "fwZk9FtOuQpTT/MSuOFgJSHK9mTvMA/Z33TM4BvyPyMx0fcAzZv/rEHGMyoeW1mUqHX8ftpx+edRZcix3g7pOw==",
+        "dependencies": {
+          "Boutquin.Domain": "[1.0.0]"
+        }
+      },
+      "Boutquin.Storage.Infrastructure": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "hse+IHLQ3Cz/zzV1S+Addd/s48Atf3FkmfUKVQoEK3Ac+rl3yr6RqD3gKqkAvMk1ynZTyyjBgrDKLrhgE0iMHA==",
+        "dependencies": {
+          "Boutquin.Storage.Domain": "[2.0.0]",
+          "Google.Protobuf": "3.36.2",
+          "K4os.Compression.LZ4": "1.3.8",
+          "System.IO.Hashing": "10.0.12",
+          "TestableIO.System.IO.Abstractions": "22.2.0"
+        }
+      },
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.36.2",
+        "contentHash": "Ci1q1iJg74qAE5riTA2FbMS0wPbpruPQI/JQ9DrAsRo2VsSxgt1e/pmxGxgrci+pXJEgrSYg2vPl8rrStZkclQ=="
+      },
+      "K4os.Compression.LZ4": {
+        "type": "Transitive",
+        "resolved": "1.3.8",
+        "contentHash": "LhwlPa7c1zs1OV2XadMtAWdImjLIsqFJPoRcIWAadSRn0Ri1DepK65UbWLPmt4riLqx2d40xjXRk0ogpqNtK7g=="
+      },
+      "Microsoft.Build.Tasks.Git": {
+        "type": "Transitive",
+        "resolved": "10.0.401",
+        "contentHash": "ZYctNuT10V9IYyCFydy63DXx0ggZQuynuzQOdLvW62dPgzjIz7f0ISEP75RGiq1jFQh8p6TmGSqxeQZQ87LCig==",
+        "dependencies": {
+          "System.IO.Hashing": "10.0.12"
+        }
+      },
+      "Microsoft.Extensions.Primitives": {
+        "type": "Transitive",
+        "resolved": "10.0.12",
+        "contentHash": "dYfCLR52UA+3DL7C4I/pvSaRPkNqxrUAQmbFL2u0zvYKKzqgrFCJl08Df+F1aYc8leu9JvpC9bsURUdpExcBXQ=="
+      },
+      "Microsoft.SourceLink.Common": {
+        "type": "Transitive",
+        "resolved": "10.0.401",
+        "contentHash": "u3rLxIwi/9MqDFaWGE/QQgLR1NBEzLOW2lv5+9OrZPDBYIAmFdYSWCWrR1ufpXWOqFn+x02TgKropl/oDuHmgA=="
+      },
+      "Polly.Core": {
+        "type": "Transitive",
+        "resolved": "8.8.0",
+        "contentHash": "TewV9uNFsoRFggoFbTAGFwsMYPuckA+wTIpQPyhLL9BANRPQRENz2S4bwATrB3HBOakN5oKLFIllPiDnVecmJg=="
+      },
+      "Polly.RateLimiting": {
+        "type": "Transitive",
+        "resolved": "8.8.0",
+        "contentHash": "XRXXqK7x6lxZDzVriM4hzLFdSmt0yvCo1QB5zv0mvBo3qDS5yFdtiG4EB+xodRUUaFG1hFk0hnVi3K45wD+/kA==",
+        "dependencies": {
+          "Polly.Core": "8.8.0",
+          "System.Threading.RateLimiting": "8.0.0"
+        }
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "10.0.12",
+        "contentHash": "jDix4bBMYnpZdSPcnY+KDV6ik3SRMzpMKby/bZl/XUwIiflwRNAFZ0oOl61R/pSaveIJ8t1gs2BUlrGsPs/bcg=="
+      },
+      "System.Threading.RateLimiting": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "7mu9v0QDv66ar3DpGSZHg9NuNcxDaaAcnMULuZlaTpP9+hwXhrxNGsF5GmLkSHxFdb5bBc1TzeujsRgTrPWi+Q=="
+      },
+      "TestableIO.System.IO.Abstractions": {
+        "type": "Transitive",
+        "resolved": "22.2.0",
+        "contentHash": "BQPyr0A1s2HvpVTZIyolrZ3ZdPn8DU2tqciaK1oco3pjm76fiKIk75eup4R9reZjNS75M+WJIICOlNX5OFt50g==",
+        "dependencies": {
+          "Testably.Abstractions.FileSystem.Interface": "10.3.0"
+        }
+      },
+      "Testably.Abstractions.FileSystem.Interface": {
+        "type": "Transitive",
+        "resolved": "10.3.0",
+        "contentHash": "5ebMaoADkzjfW7GnZYKaUebV8XmUn++C/4sKk1PTzCiddEgbSKBq3pW4EWEi70rYJAK0gA1yDWrYFeHq18FvHQ=="
+      },
+      "Boutquin.MarketData.Adapter.Shared": {
+        "type": "Project",
+        "dependencies": {
+          "Boutquin.Domain": "[1.0.0, )",
+          "Boutquin.MarketData.Abstractions": "[2.0.0-rc.20261027.3, )",
+          "Boutquin.MarketData.Calendars": "[2.0.0-rc.20261027.3, )"
+        }
+      },
+      "Boutquin.Domain": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "I6GO5jM85f0TCXY2H/zW2OGa4Kz1KQZJ7OWOPxtSaLT94Fnb67AECymIPhKwosTnXdsKvicyPg8cLXwO9m2cDg=="
+      },
+      "Boutquin.MarketData.Calendars": {
+        "type": "CentralTransitive",
+        "requested": "[2.0.0-rc.20261027.3, )",
+        "resolved": "2.0.0-rc.20261027.3",
+        "contentHash": "+/3NOxeyOB6V+wbl1U9bAVc5N9gNGbi6S02dn8+lAK8Ksj07QBjLfyOU+JM8PIFC9wb4Ae2Qy9LGGTM+i09+uA==",
+        "dependencies": {
+          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.3"
+        }
+      }
+    }
+  }
+}

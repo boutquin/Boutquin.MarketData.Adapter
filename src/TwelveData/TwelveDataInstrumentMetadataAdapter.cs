@@ -31,7 +31,7 @@ using Microsoft.Extensions.Options;
 namespace Boutquin.MarketData.Adapter.TwelveData;
 
 /// <summary>
-/// Fetches instrument reference metadata from the Twelve Data <c>/stocks</c> endpoint
+/// Fetches instrument reference metadata from the Twelve Data <c>/etfs</c> endpoint
 /// and reshapes it into canonical <see cref="InstrumentMetadata"/> records.
 /// </summary>
 /// <remarks>
@@ -71,30 +71,74 @@ public sealed class TwelveDataInstrumentMetadataAdapter
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>twelvedata</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("twelvedata");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 50; adapters with higher ranks are attempted first.</summary>
     public int Priority => 50;
 
-    /// <inheritdoc />
-    public bool CanHandle(InstrumentMetadataRequest request) =>
-        request.Symbols.Count > 0;
+    /// <summary>
+    /// Listing venues TwelveData's metadata endpoint covers for this adapter's role:
+    /// CA primary (XTSE, NEOE) and US fallback (XNYS, XNAS) — the four venues the
+    /// etfwealthiq universe declares. See <see cref="TwelveDataPriceBarAdapter"/> for
+    /// the broader opt-in rationale.
+    /// </summary>
+    private static readonly IReadOnlySet<ExchangeCode> s_supportedExchanges =
+        new HashSet<ExchangeCode>
+        {
+            ExchangeCode.XTSE,
+            ExchangeCode.NEOE,
+            ExchangeCode.XNYS,
+            ExchangeCode.XNAS,
+        };
 
-    /// <inheritdoc />
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Metadata requests with symbols on a supported venue, or with no venue hint.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(InstrumentMetadataRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Symbols.Count > 0
+            && (request.Exchange is null || s_supportedExchanges.Contains(request.Exchange.Value));
+    }
+
+    /// <summary>Retrieves ETF catalogue metadata for the requested symbols from Twelve Data.</summary>
+    /// <param name="request">Metadata requests with symbols on a supported venue, or with no venue hint.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<InstrumentMetadata>>> FetchAsync(
         InstrumentMetadataRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Twelve Data metadata fetches require a supported venue.", nameof(request));
+        }
+
+        _options.ValidateEndpoint();
         var results = new List<InstrumentMetadata>();
         var issues = new List<DataIssue>();
         var provenanceList = new List<DataProvenance>();
 
         foreach (var symbol in request.Symbols)
         {
-            var url = $"{_options.BaseUrl.TrimEnd('/')}/stocks" +
+            // Use /etfs rather than /stocks — TwelveData's /stocks endpoint returns only
+            // common-stock listings and silently filters ETF rows out, which produced the
+            // 2026-04-19 CA research regression (bare XIC returned "Scandinavian Energies
+            // Inc." on XFRA/XMUN, a US stock that happens to share the 3-letter symbol).
+            // See https://twelvedata.com/docs/asset-catalogs/etf-list.
+            var micCodeParam = request.Exchange is null
+                ? string.Empty
+                : $"&mic_code={request.Exchange.Value}";
+            var sourceUrl = $"{_options.BaseUrl.TrimEnd('/')}/etfs" +
                       $"?symbol={Uri.EscapeDataString(symbol.Ticker)}" +
-                      $"&apikey={_options.ApiKey}";
+                      $"{micCodeParam}";
+            var url = $"{sourceUrl}&apikey={Uri.EscapeDataString(_options.ApiKey)}";
 
             try
             {
@@ -103,10 +147,10 @@ public sealed class TwelveDataInstrumentMetadataAdapter
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-                var rawKey = $"twelvedata/meta/{symbol}";
+                var rawKey = $"twelvedata/meta/{symbol}/{request.Exchange?.ToString() ?? "any"}";
                 await _rawStore.SaveAsync(rawKey, json, cancellationToken).ConfigureAwait(false);
 
-                var meta = ParseMetadata(json, symbol);
+                var meta = ParseMetadata(json, symbol, request.Exchange);
                 if (meta is not null)
                 {
                     results.Add(meta);
@@ -126,13 +170,17 @@ public sealed class TwelveDataInstrumentMetadataAdapter
                     RetrievalMode: RetrievalMode.Api,
                     Freshness: FreshnessClass.EndOfDay,
                     RetrievedAtUtc: _clock.UtcNow,
-                    SourceUrl: url));
+                    SourceUrl: sourceUrl));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch metadata for {Symbol} from TwelveData", symbol);
+                _logger.LogWarning("Failed to fetch metadata for {Symbol} from TwelveData ({ExceptionType})", symbol, ex.GetType().Name);
                 issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Warning,
-                    $"Failed to fetch metadata for symbol '{symbol}': {ex.Message}"));
+                    $"Failed to fetch metadata for symbol '{symbol}'."));
             }
         }
 
@@ -152,10 +200,11 @@ public sealed class TwelveDataInstrumentMetadataAdapter
     }
 
     /// <summary>
-    /// Parses the TwelveData <c>/stocks</c> response. The response contains a
-    /// <c>"data"</c> array; we extract the first match for the requested symbol.
+    /// Parses the TwelveData <c>/etfs</c> response. The response contains a
+    /// <c>"data"</c> array; we extract the first row matching the requested symbol and,
+    /// when specified, exchange. Provider-side filtering is not trusted for identity.
     /// </summary>
-    private static InstrumentMetadata? ParseMetadata(string json, Symbol symbol)
+    private static InstrumentMetadata? ParseMetadata(string json, Symbol symbol, ExchangeCode? exchangeHint)
     {
         using var doc = JsonDocument.Parse(json);
 
@@ -166,21 +215,34 @@ public sealed class TwelveDataInstrumentMetadataAdapter
             return null;
         }
 
-        var first = dataArray[0];
-        var name = first.TryGetProperty("name", out var n) ? n.GetString() ?? symbol.Ticker : symbol.Ticker;
-        var exchange = first.TryGetProperty("exchange", out var e) ? e.GetString() ?? "" : "";
+        foreach (var row in dataArray.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Object ||
+                !row.TryGetProperty("symbol", out var ticker) ||
+                ticker.ValueKind != JsonValueKind.String ||
+                !string.Equals(ticker.GetString(), symbol.Ticker, StringComparison.OrdinalIgnoreCase) ||
+                !row.TryGetProperty("mic_code", out var mic) ||
+                mic.ValueKind != JsonValueKind.String ||
+                !Enum.TryParse<ExchangeCode>(mic.GetString(), ignoreCase: true, out var exchange) ||
+                !Enum.IsDefined(exchange) ||
+                !string.Equals(mic.GetString(), exchange.ToString(), StringComparison.OrdinalIgnoreCase) ||
+                (exchangeHint is not null && exchange != exchangeHint.Value))
+            {
+                continue;
+            }
 
-        // TwelveData does not provide inception/startDate — leave null.
-        return new InstrumentMetadata(
-            new Symbol(symbol.Ticker.ToUpperInvariant()),
-            name,
-            ParseExchangeCode(exchange),
-            AssetClassCode.Equities,
-            null,
-            null,
-            $"Metadata sourced from TwelveData (fallback)");
+            var name = row.TryGetProperty("name", out var n) ? n.GetString() ?? symbol.Ticker : symbol.Ticker;
+            return new InstrumentMetadata(
+                new Symbol(symbol.Ticker.ToUpperInvariant()),
+                name,
+                exchange,
+                AssetClassCode.Equities,
+                null,
+                null,
+                "Metadata sourced from TwelveData (fallback)");
+        }
+
+        return null;
     }
 
-    private static ExchangeCode ParseExchangeCode(string exchange) =>
-        Enum.TryParse<ExchangeCode>(exchange, ignoreCase: true, out var code) ? code : ExchangeCode.XNAS;
 }

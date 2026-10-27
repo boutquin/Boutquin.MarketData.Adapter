@@ -25,6 +25,8 @@ namespace Boutquin.MarketData.Adapter.Shared;
 /// or unexpected gaps, based on a business calendar.
 /// Delegates to <see cref="CoverageComputation.ClassifyGaps"/> for the canonical implementation.
 /// </summary>
+/// <remarks>A calendar created by <see cref="AdapterCalendarFactory"/> additionally reports
+/// when the request crosses its explicit built-in holiday dataset bounds.</remarks>
 public static class GapClassifier
 {
     /// <summary>
@@ -33,10 +35,11 @@ public static class GapClassifier
     /// <param name="calendar">The business calendar governing publication days for the data source.</param>
     /// <param name="range">The requested date range (inclusive).</param>
     /// <param name="returnedDates">The set of dates for which data was actually returned.</param>
-    /// <returns>A list of <see cref="DataIssue"/> entries for each unexpected gap.</returns>
+    /// <returns>Issues for unexpected gaps, plus a range notice for an explicitly bounded calendar when needed.</returns>
+    /// <remarks>Custom calendars carry no inferred dataset limit.</remarks>
     public static IReadOnlyList<DataIssue> Classify(
         IBusinessCalendar calendar,
         DateRange range,
         IReadOnlySet<DateOnly> returnedDates) =>
-        CoverageComputation.ClassifyGaps(calendar, range, returnedDates);
+        AdapterCalendarFactory.AddRangeWarning(calendar, range, CoverageComputation.ClassifyGaps(calendar, range, returnedDates));
 }

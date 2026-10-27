@@ -22,6 +22,7 @@ using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Diagnostics;
 using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
+using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
 using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Adapter.Shared;
@@ -44,9 +45,9 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 /// <see langword="false"/>.
 /// </para>
 /// <para>
-/// Each symbol is fetched individually. Per-symbol failures are caught, logged as warnings,
-/// and recorded as <see cref="DataIssue"/> entries — the adapter continues with the remaining
-/// symbols rather than failing the entire batch.
+/// Exactly one symbol is accepted because <see cref="Bar"/> does not carry symbol ownership.
+/// Partition batches before dispatch. Fetch failures are logged and recorded as
+/// <see cref="DataIssue"/> entries; caller cancellation propagates.
 /// </para>
 /// </remarks>
 public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryRequest, Bar>, IPrioritizedAdapter
@@ -83,21 +84,56 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>tiingo</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("tiingo");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(PriceHistoryRequest request) =>
-        request.Frequency == DataFrequency.Daily && request.Symbols.Count > 0;
+    /// <summary>
+    /// Listing venues Tiingo's daily-price feed covers for this adapter's role in the
+    /// orchestrator: US equities and ETFs only. A request whose <see cref="PriceHistoryRequest.Exchange"/>
+    /// is set but not contained here causes <see cref="CanHandle"/> to return
+    /// <see langword="false"/>, so the pipeline falls through to the next prioritized
+    /// adapter instead of returning unrelated US data for a foreign-listed symbol — the
+    /// exact regression behind the 2026-04-19 CA research failure (bare <c>XIC</c>
+    /// returned Cimarex Energy, a US equity sharing the 3-letter TSX ETF symbol).
+    /// </summary>
+    private static readonly IReadOnlySet<ExchangeCode> s_supportedExchanges =
+        new HashSet<ExchangeCode> { ExchangeCode.XNYS, ExchangeCode.XNAS };
 
-    /// <inheritdoc />
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for exactly one symbol on a supported US venue, or with no venue hint.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(PriceHistoryRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Frequency == DataFrequency.Daily
+            && request.Symbols.Count == 1
+            && (request.Exchange is null || s_supportedExchanges.Contains(request.Exchange.Value));
+    }
+
+    /// <summary>Retrieves raw daily OHLCV bars and the provider-adjusted close for one symbol from Tiingo.</summary>
+    /// <param name="request">Daily requests for exactly one symbol on a supported US venue, or with no venue hint.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<Bar>>> FetchAsync(
         PriceHistoryRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Tiingo price fetches require one symbol, daily frequency, and a supported venue. Partition batches before dispatch.", nameof(request));
+        }
+
+        TiingoTickerValidator.ThrowIfInvalid(request.Symbols, nameof(request));
+        _options.ValidateEndpoint();
+
         var allBars = new List<Bar>();
         var issues = new List<DataIssue>();
         var provenanceList = new List<DataProvenance>();
@@ -111,8 +147,8 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
         foreach (var symbol in request.Symbols)
         {
             var url = $"{_options.BaseUrl.TrimEnd('/')}/tiingo/daily/{symbol}/prices" +
-                      $"?startDate={request.Range.From:yyyy-MM-dd}" +
-                      $"&endDate={request.Range.To:yyyy-MM-dd}" +
+                      $"?startDate={request.Range.From.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}" +
+                      $"&endDate={request.Range.To.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}" +
                       $"&format=json";
 
             try
@@ -122,10 +158,12 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-                var rawKey = $"tiingo/daily/{symbol}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}";
+                var rawKey = $"tiingo/daily/{symbol}/{request.Range.From.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}-{request.Range.To.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}";
                 await _rawStore.SaveAsync(rawKey, json, cancellationToken).ConfigureAwait(false);
 
-                var bars = ParseBars(json);
+                var bars = ParseBars(json)
+                    .Where(bar => bar.Date >= request.Range.From && bar.Date <= request.Range.To)
+                    .ToList();
                 allBars.AddRange(bars);
 
                 if (bars.Count > 0)
@@ -150,11 +188,15 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
                     SourceUrl: url,
                     DataDate: bars.Count > 0 ? bars.Max(b => b.Date) : null));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to fetch bars for {Symbol} from Tiingo", symbol);
+                _logger.LogWarning("Failed to fetch bars for {Symbol} from Tiingo ({ExceptionType})", symbol, ex.GetType().Name);
                 issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Warning,
-                    $"Failed to fetch data for symbol '{symbol}': {ex.Message}"));
+                    $"Failed to fetch data for symbol '{symbol}'."));
             }
         }
 
@@ -178,7 +220,7 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
         foreach (var element in doc.RootElement.EnumerateArray())
         {
             var dateStr = element.GetProperty("date").GetString()!;
-            var date = DateOnly.Parse(dateStr.AsSpan(0, 10), CultureInfo.InvariantCulture);
+            var date = DateOnly.ParseExact(dateStr.AsSpan(0, 10), "yyyy-MM-dd", CultureInfo.InvariantCulture);
 
             var open = element.GetProperty("open").GetDecimal();
             var high = element.GetProperty("high").GetDecimal();
@@ -192,6 +234,12 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
             var volume = element.TryGetProperty("volume", out var volProp) && volProp.ValueKind == JsonValueKind.Number
                 ? volProp.GetInt64()
                 : 0L;
+
+            if (volume < 0 || open < 0 || high < 0 || low < 0 || close < 0 || adjClose < 0
+                || low > high || open < low || open > high || close < low || close > high)
+            {
+                throw new FormatException("Tiingo returned an invalid equity price bar.");
+            }
 
             bars.Add(new Bar(date, open, high, low, close, adjClose, volume));
         }

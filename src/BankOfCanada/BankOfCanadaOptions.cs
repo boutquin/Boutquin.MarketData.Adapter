@@ -17,12 +17,14 @@
 namespace Boutquin.MarketData.Adapter.BankOfCanada;
 
 /// <summary>
-/// Configuration options for the Bank of Canada Valet API adapter.
+/// Configuration options for the Bank of Canada adapters.
 /// </summary>
 /// <remarks>
 /// Bind this class to a configuration section (e.g., "BankOfCanada") or configure inline
-/// via <see cref="ServiceCollectionExtensions.AddMarketDataBankOfCanada"/>. All properties
-/// have sensible defaults for fetching the Canadian zero-coupon yield curve.
+/// via <see cref="ServiceCollectionExtensions.AddMarketDataBankOfCanada"/>. The FX and CORRA
+/// adapters read <see cref="BaseUrl"/> (the Valet API); the zero-coupon yield-curve adapter
+/// reads <see cref="YieldCurveLookupUrl"/>, because the Bank does not publish that curve
+/// through Valet.
 /// </remarks>
 public sealed class BankOfCanadaOptions
 {
@@ -32,12 +34,33 @@ public sealed class BankOfCanadaOptions
     public string BaseUrl { get; set; } = "https://www.bankofcanada.ca/valet";
 
     /// <summary>
-    /// The observation group name identifying the yield curve series (e.g., "BD.CDN.ZERO").
+    /// URL of the Bank of Canada's zero-coupon yield-curve CSV lookup — the download behind
+    /// the "Yield curves for zero-coupon bonds" page. Defaults to
+    /// <c>https://www.bankofcanada.ca/stats/results/csv</c>.
     /// </summary>
+    /// <remarks>
+    /// <see cref="BankOfCanadaYieldCurveAdapter"/> appends
+    /// <c>?lookupPage=lookup_yield_curve.php&amp;dFrom={from}&amp;dTo={to}</c> to this value.
+    /// The response is a CSV with a <c>Date</c> column followed by 120 <c>ZCnnnYR</c> columns
+    /// (terms from 0.25 to 30 years in 0.25-year steps), rates already in decimal form, and
+    /// <c>na</c> for dates with no curve. The Bank refreshes the file weekly with a lag of
+    /// about two weeks. This endpoint is not part of the documented Valet API.
+    /// </remarks>
+    public string YieldCurveLookupUrl { get; set; } = "https://www.bankofcanada.ca/stats/results/csv";
+
+    /// <summary>
+    /// No longer used. Earlier versions fetched the yield curve from a Valet observation group
+    /// of this name, but Valet has no zero-coupon yield-curve group (the default,
+    /// <c>BD.CDN.ZERO</c>, answers HTTP 404), so the adapter now reads the Bank's CSV lookup
+    /// at <see cref="YieldCurveLookupUrl"/> instead. Retained so existing configuration
+    /// bindings keep compiling; the value has no effect.
+    /// </summary>
+    [Obsolete("Valet has no zero-coupon yield-curve group; the adapter reads YieldCurveLookupUrl instead. This property has no effect.")]
     public string GroupName { get; set; } = "BD.CDN.ZERO";
 
     /// <summary>
-    /// The currency code for the yield curve (e.g., "CAD").
+    /// The currency code of the supported zero-coupon curve. Only "CAD" is served;
+    /// another value makes the yield-curve adapter ineligible.
     /// </summary>
     public string Currency { get; set; } = "CAD";
 
@@ -45,4 +68,15 @@ public sealed class BankOfCanadaOptions
     /// The observation group name identifying the CORRA series (e.g., "CORRA_GRAPH").
     /// </summary>
     public string CorraGroupName { get; set; } = "CORRA_GRAPH";
+
+    /// <summary>
+    /// Valet series code containing the CORRA rate within the configured observation group.
+    /// </summary>
+    /// <value><c>AVG.INTWO</c>, the Bank of Canada's published CORRA rate series.</value>
+    /// <remarks>
+    /// A Valet group may contain both a percentage rate and unrelated trading-volume series.
+    /// This explicit code selects the rate; it is independent of <see cref="CorraGroupName"/>.
+    /// Configure both values when using a custom group. Empty codes are rejected before fetching.
+    /// </remarks>
+    public string CorraSeriesCode { get; set; } = "AVG.INTWO";
 }

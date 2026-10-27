@@ -49,6 +49,7 @@ namespace Boutquin.MarketData.Adapter.FamaFrench;
 /// <para>
 /// Parsing stops when a blank line or a line beginning with non-digit characters is encountered,
 /// which marks the transition to annual data or end of the daily section.
+/// Expanded CSV content is limited to 64 MiB before decoding and persistence.
 /// </para>
 /// </remarks>
 public sealed class FamaFrenchFactorAdapter
@@ -78,6 +79,12 @@ public sealed class FamaFrenchFactorAdapter
         IOptions<FamaFrenchOptions> options,
         ILogger<FamaFrenchFactorAdapter> logger)
     {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(rawStore);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(calendar);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
         _transport = transport;
         _rawStore = rawStore;
         _clock = clock;
@@ -86,27 +93,55 @@ public sealed class FamaFrenchFactorAdapter
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>fama-french</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("fama-french");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(FactorSeriesRequest request) =>
-        !string.IsNullOrWhiteSpace(request.DatasetName.Value);
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily or monthly requests with a safe dataset identifier.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(FactorSeriesRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return IsSafeDatasetName(request.DatasetName.Value) &&
+        request.Frequency is DataFrequency.Daily or DataFrequency.Monthly;
+    }
 
-    /// <inheritdoc />
+    private static bool IsSafeDatasetName(string name) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        name.All(c => c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '_' or '-');
+
+    /// <summary>Retrieves daily or monthly factor observations from the selected dataset from Ken French Data Library.</summary>
+    /// <param name="request">Daily or monthly requests with a safe dataset identifier.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<FactorObservation>>> FetchAsync(
         FactorSeriesRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (request.Frequency is not (DataFrequency.Daily or DataFrequency.Monthly))
+        {
+            throw new ArgumentException("Fama-French supports daily or monthly requests.", nameof(request));
+        }
+        if (!IsSafeDatasetName(request.DatasetName.Value))
+        {
+            return BuildErrorEnvelope("Invalid Fama-French dataset name.");
+        }
+
         var url = $"{_options.BaseUrl}/{request.DatasetName}_CSV.zip";
 
         try
         {
             var uri = new Uri(url);
-            var stream = await _transport.GetAsync(uri, null, cancellationToken).ConfigureAwait(false);
+            using var stream = await _transport.GetAsync(uri, null, cancellationToken).ConfigureAwait(false);
 
             // Copy the stream into a MemoryStream so we can open it as a ZipArchive.
             using var memoryStream = new MemoryStream();
@@ -125,17 +160,34 @@ public sealed class FamaFrenchFactorAdapter
                         $"No CSV entry found in ZIP archive for dataset {request.DatasetName}.");
                 }
 
+                const long maximumExpandedBytes = 64L * 1024 * 1024;
+                if (csvEntry.Length > maximumExpandedBytes)
+                {
+                    return BuildErrorEnvelope("Fama-French CSV exceeds the 64 MiB expanded-size limit.");
+                }
                 using var entryStream = csvEntry.Open();
-                using var reader = new StreamReader(entryStream);
+                using var expanded = new MemoryStream();
+                var buffer = new byte[8192];
+                int read;
+                while ((read = await entryStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    if (expanded.Length + read > maximumExpandedBytes)
+                    {
+                        return BuildErrorEnvelope("Fama-French CSV exceeds the 64 MiB expanded-size limit.");
+                    }
+                    expanded.Write(buffer, 0, read);
+                }
+                expanded.Position = 0;
+                using var reader = new StreamReader(expanded);
                 csvText = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
             }
 
             // Persist raw CSV for audit and replay.
-            var storeKey = $"fama-french/{request.DatasetName}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}";
+            var storeKey = FormattableString.Invariant($"fama-french/{request.DatasetName}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}");
             await _rawStore.SaveAsync(storeKey, csvText, cancellationToken).ConfigureAwait(false);
 
             // Parse the CSV content.
-            var lines = csvText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+            var lines = csvText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
 
             // Find the header row: the first line that starts with a comma.
             string[]? factorNames = null;
@@ -172,11 +224,6 @@ public sealed class FamaFrenchFactorAdapter
                 }
 
                 var fields = line.Split(',');
-                if (fields.Length < 2)
-                {
-                    continue;
-                }
-
                 var dateStr = fields[0].Trim();
                 DateOnly date;
 
@@ -203,20 +250,27 @@ public sealed class FamaFrenchFactorAdapter
                     continue;
                 }
 
-                var factors = new Dictionary<string, decimal>(StringComparer.Ordinal);
-                for (var j = 1; j < fields.Length && j - 1 < factorNames.Length; j++)
+                if (fields.Length != factorNames.Length + 1)
                 {
-                    var valueStr = fields[j].Trim();
-                    if (decimal.TryParse(valueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-                    {
-                        // Factor values are in percentage form; convert to decimal.
-                        factors[factorNames[j - 1]] = value / 100m;
-                    }
+                    return BuildErrorEnvelope("Malformed factor row in Fama-French dataset.");
                 }
 
-                if (factors.Count > 0)
+                var factors = new Dictionary<string, decimal>(StringComparer.Ordinal);
+                for (var j = 1; j < fields.Length; j++)
                 {
-                    observations.Add(new FactorObservation(date, factors));
+                    var valueStr = fields[j].Trim();
+                    if (!decimal.TryParse(valueStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                    {
+                        return BuildErrorEnvelope("Malformed factor value in Fama-French dataset.");
+                    }
+
+                    // Factor values are in percentage form; convert to decimal.
+                    factors[factorNames[j - 1]] = value / 100m;
+                }
+
+                foreach (var (factorName, value) in factors)
+                {
+                    observations.Add(new FactorObservation(date, factorName, value));
                 }
             }
 
@@ -226,7 +280,7 @@ public sealed class FamaFrenchFactorAdapter
                 request.DatasetName);
 
             var issues = new List<DataIssue>();
-            if (observations.Count == 0)
+            if (observations.Count == 0 && CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
             {
                 issues.Add(new DataIssue(new IssueCode("NO_DATA"), IssueSeverity.Error,
                     $"No factor observations found within the requested date range for dataset {request.DatasetName}."));
@@ -253,12 +307,16 @@ public sealed class FamaFrenchFactorAdapter
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch Fama-French dataset {DatasetName}", request.DatasetName);
 
             return BuildErrorEnvelope(
-                $"Failed to fetch Fama-French dataset {request.DatasetName}: {ex.Message}");
+                $"Failed to fetch Fama-French dataset {request.DatasetName}.");
         }
     }
 

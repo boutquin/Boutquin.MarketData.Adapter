@@ -15,17 +15,17 @@
 //
 
 using System.Globalization;
+using System.Xml;
 using System.Xml.Linq;
-
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Diagnostics;
 using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
+using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
 using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Transport.Http;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -100,6 +100,12 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
         IOptions<UsTreasuryOptions> options,
         ILogger<UsTreasuryYieldAdapter> logger)
     {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(rawStore);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(calendar);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
         _transport = transport;
         _rawStore = rawStore;
         _clock = clock;
@@ -108,20 +114,41 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>us-treasury</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("us-treasury");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(YieldCurveQuoteRequest request) => true;
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">USD-TREASURY curve requests on a supported US venue, or with no venue hint.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(YieldCurveQuoteRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return string.Equals(request.CurveId.Value, "USD-TREASURY", StringComparison.OrdinalIgnoreCase)
+            && (request.Exchange is null or ExchangeCode.XNYS or ExchangeCode.XNAS);
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves the latest available Treasury curve on or before the as-of date from US Treasury.</summary>
+    /// <param name="request">USD-TREASURY curve requests on a supported US venue, or with no venue hint.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<YieldCurveQuote>>> FetchAsync(
         YieldCurveQuoteRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("The US Treasury adapter cannot serve this curve or venue.", nameof(request));
+        }
+
         var url = $"{_options.BaseUrl}?data=daily_treasury_yield_curve&field_tdr_date_value={request.AsOfDate.Year}";
 
         try
@@ -136,49 +163,30 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
             }
 
             await _rawStore.SaveAsync(
-                $"us-treasury/yield-curve/{request.CurveId}/{request.AsOfDate:yyyyMMdd}",
+                FormattableString.Invariant($"us-treasury/yield-curve/{request.CurveId}/{request.AsOfDate:yyyyMMdd}"),
                 xml,
                 cancellationToken).ConfigureAwait(false);
 
             var issues = new List<DataIssue>();
             var quotes = new List<YieldCurveQuote>();
 
-            var doc = XDocument.Parse(xml);
+            var (bestProperties, bestDate) = FindBestProperties(ParseFeed(xml), request.AsOfDate);
 
-            // Navigate: feed/entry/content/m:properties
-            var entries = doc.Descendants(s_atomNs + "entry");
-
-            // Parse all entries and find the closest date <= AsOfDate.
-            XElement? bestProperties = null;
-            DateOnly bestDate = DateOnly.MinValue;
-
-            foreach (var entry in entries)
+            if (bestProperties is null && request.AsOfDate.Year > 1)
             {
-                var content = entry.Element(s_atomNs + "content");
-                var properties = content?.Element(s_metadataNs + "properties");
-                if (properties is null)
+                var priorYear = request.AsOfDate.Year - 1;
+                url = $"{_options.BaseUrl}?data=daily_treasury_yield_curve&field_tdr_date_value={priorYear}";
+                var priorStream = await _transport.GetAsync(new Uri(url), null, cancellationToken).ConfigureAwait(false);
+                using (var reader = new StreamReader(priorStream))
                 {
-                    continue;
+                    xml = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
                 }
 
-                var dateElement = properties.Element(s_dataNs + "NEW_DATE");
-                if (dateElement is null)
-                {
-                    continue;
-                }
-
-                var dateText = dateElement.Value.Trim();
-                if (!DateTime.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDateTime))
-                {
-                    continue;
-                }
-
-                var entryDate = DateOnly.FromDateTime(parsedDateTime);
-                if (entryDate <= request.AsOfDate && entryDate > bestDate)
-                {
-                    bestDate = entryDate;
-                    bestProperties = properties;
-                }
+                await _rawStore.SaveAsync(
+                    FormattableString.Invariant($"us-treasury/yield-curve/{request.CurveId}/{request.AsOfDate:yyyyMMdd}-prior-{priorYear}"),
+                    xml,
+                    cancellationToken).ConfigureAwait(false);
+                (bestProperties, bestDate) = FindBestProperties(ParseFeed(xml), request.AsOfDate);
             }
 
             if (bestProperties is null)
@@ -209,12 +217,14 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
 
                     if (!decimal.TryParse(rateText, NumberStyles.Number, CultureInfo.InvariantCulture, out var ratePercent))
                     {
+                        issues.Add(new DataIssue(new IssueCode("MALFORMED_ROW"), IssueSeverity.Warning,
+                            $"Skipped an invalid Treasury yield for tenor {tenor}."));
                         continue;
                     }
 
                     // Convert from percentage to decimal form (e.g., 4.5 -> 0.045).
                     var rate = ratePercent / 100m;
-                    quotes.Add(new YieldCurveQuote(tenor, rate));
+                    quotes.Add(new YieldCurveQuote(bestDate, tenor, rate));
                 }
             }
 
@@ -252,6 +262,10 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch yield curve data for {CurveId} from US Treasury", request.CurveId);
@@ -263,7 +277,7 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
                     ReturnedPoints: 0,
                     MissingPoints: 1,
                     CoverageRatio: 0m),
-                Issues: [new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error, $"US Treasury fetch failed: {ex.Message}")],
+                Issues: [new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error, "US Treasury fetch failed.")],
                 Provenance: [new DataProvenance(
                     Provider: new ProviderCode("us-treasury"),
                     Dataset: request.CurveId.Value,
@@ -273,5 +287,43 @@ public sealed class UsTreasuryYieldAdapter : IDataSourceAdapter<YieldCurveQuoteR
                     RetrievedAtUtc: _clock.UtcNow,
                     SourceUrl: url)]);
         }
+    }
+
+    private static XDocument ParseFeed(string xml)
+    {
+        using var text = new StringReader(xml);
+        using var reader = XmlReader.Create(text, new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            MaxCharactersInDocument = 64L * 1024 * 1024,
+        });
+        return XDocument.Load(reader);
+    }
+
+    private static (XElement? Properties, DateOnly Date) FindBestProperties(XDocument doc, DateOnly asOfDate)
+    {
+        XElement? bestProperties = null;
+        var bestDate = DateOnly.MinValue;
+
+        foreach (var entry in doc.Descendants(s_atomNs + "entry"))
+        {
+            var properties = entry.Element(s_atomNs + "content")?.Element(s_metadataNs + "properties");
+            var dateText = properties?.Element(s_dataNs + "NEW_DATE")?.Value.Trim();
+            if (dateText is null ||
+                !DateTimeOffset.TryParseExact(dateText, ["yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.FFFFFFF", "yyyy-MM-ddTHH:mm:ssK", "yyyy-MM-ddTHH:mm:ss.FFFFFFFK"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDateTime))
+            {
+                continue;
+            }
+
+            var entryDate = DateOnly.FromDateTime(parsedDateTime.DateTime);
+            if (entryDate <= asOfDate && entryDate > bestDate)
+            {
+                bestDate = entryDate;
+                bestProperties = properties;
+            }
+        }
+
+        return (bestProperties, bestDate);
     }
 }

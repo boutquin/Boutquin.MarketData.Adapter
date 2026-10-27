@@ -14,8 +14,8 @@
 //  limitations under the License.
 //
 
+using Boutquin.Domain.Enumerations;
 using Boutquin.MarketData.Abstractions.Records;
-using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
 using Boutquin.MarketData.Adapter.Frankfurter;
 using Boutquin.MarketData.Adapter.Tests.Shared;
@@ -48,7 +48,7 @@ public sealed class FrankfurterGoldenDataTests
             NullLogger<FrankfurterFxAdapter>.Instance);
 
         var request = new FxHistoryRequest(
-            [new FxPair(CurrencyCode.EUR, CurrencyCode.USD)],
+            [new FxPair(Currency.EUR, Currency.USD)],
             new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)));
 
         // Act
@@ -59,19 +59,14 @@ public sealed class FrankfurterGoldenDataTests
 
         var rates = result.Payload.OrderBy(r => r.Date).ToList();
 
+        // FxRate no longer carries the pair (the request/dataset identifies it); assert date + rate.
         rates[0].Date.Should().Be(new DateOnly(2024, 1, 2));
-        rates[0].BaseCurrency.Should().Be(CurrencyCode.EUR);
-        rates[0].QuoteCurrency.Should().Be(CurrencyCode.USD);
         rates[0].Rate.Should().Be(1.1037m);
 
         rates[1].Date.Should().Be(new DateOnly(2024, 1, 3));
-        rates[1].BaseCurrency.Should().Be(CurrencyCode.EUR);
-        rates[1].QuoteCurrency.Should().Be(CurrencyCode.USD);
         rates[1].Rate.Should().Be(1.0948m);
 
         rates[2].Date.Should().Be(new DateOnly(2024, 1, 4));
-        rates[2].BaseCurrency.Should().Be(CurrencyCode.EUR);
-        rates[2].QuoteCurrency.Should().Be(CurrencyCode.USD);
         rates[2].Rate.Should().Be(1.0951m);
     }
 }

@@ -45,8 +45,9 @@ namespace Boutquin.MarketData.Adapter.Fred;
 /// <c>"."</c> (its sentinel for missing data) are skipped and counted as missing points.
 /// </para>
 /// <para>
-/// When <see cref="FredOptions.NormalizePercentToDecimal"/> is enabled, all values are
-/// divided by 100 to convert from percent to decimal form (e.g., 5.25 becomes 0.0525).
+/// When <see cref="FredOptions.NormalizePercentToDecimal"/> is enabled for a known
+/// percent-denominated series, values are divided by 100 (e.g., 5.25 becomes 0.0525).
+/// Otherwise the published magnitude is preserved and the unit is marked unknown.
 /// </para>
 /// </remarks>
 public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSeriesRequest, ScalarObservation>, IPrioritizedAdapter
@@ -75,6 +76,12 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
         IOptions<FredOptions> options,
         ILogger<FredEconomicSeriesAdapter> logger)
     {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(rawStore);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(calendar);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
         _transport = transport;
         _rawStore = rawStore;
         _clock = clock;
@@ -83,27 +90,49 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>fred</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("fred");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(EconomicSeriesRequest request) =>
-        !string.IsNullOrWhiteSpace(request.SeriesId.Value);
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Requests with a series identifier and a supported observation frequency.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(EconomicSeriesRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return !string.IsNullOrWhiteSpace(request.SeriesId.Value) &&
+        request.Frequency is DataFrequency.Daily or DataFrequency.Weekly or DataFrequency.Monthly;
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves observations for the requested economic series from FRED.</summary>
+    /// <param name="request">Requests with a series identifier and a supported observation frequency.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<ScalarObservation>>> FetchAsync(
         EconomicSeriesRequest request,
         CancellationToken cancellationToken = default)
     {
-        var url = $"{_options.BaseUrl}/fred/series/observations" +
-                  $"?series_id={request.SeriesId}" +
-                  $"&observation_start={request.Range.From:yyyy-MM-dd}" +
-                  $"&observation_end={request.Range.To:yyyy-MM-dd}" +
-                  $"&api_key={_options.ApiKey}" +
-                  $"&file_type=json";
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Unsupported FRED series or frequency.", nameof(request));
+        }
+        if (!Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out var baseUri) ||
+            baseUri.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(baseUri.UserInfo) ||
+            !string.IsNullOrEmpty(baseUri.Query) || !string.IsNullOrEmpty(baseUri.Fragment))
+        {
+            throw new InvalidOperationException("FRED BaseUrl must be an HTTPS origin without credentials, query, or fragment.");
+        }
+        var encodedSeriesId = Uri.EscapeDataString(request.SeriesId.Value);
+        var sourceUrl = FormattableString.Invariant($"{_options.BaseUrl}/fred/series/observations?series_id={encodedSeriesId}&observation_start={request.Range.From:yyyy-MM-dd}&observation_end={request.Range.To:yyyy-MM-dd}&file_type=json");
+        var url = sourceUrl + "&api_key=" + Uri.EscapeDataString(_options.ApiKey);
 
         try
         {
@@ -116,7 +145,7 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                 json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            var storeKey = $"fred/series/{request.SeriesId}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}";
+            var storeKey = FormattableString.Invariant($"fred/series/{encodedSeriesId}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}");
             await _rawStore.SaveAsync(storeKey, json, cancellationToken).ConfigureAwait(false);
 
             using var doc = JsonDocument.Parse(json);
@@ -139,6 +168,10 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                     "yyyy-MM-dd",
                     CultureInfo.InvariantCulture);
 
+                if (date < request.Range.From || date > request.Range.To)
+                {
+                    continue;
+                }
                 var value = decimal.Parse(valueStr, CultureInfo.InvariantCulture);
 
                 if (_options.NormalizePercentToDecimal)
@@ -146,7 +179,8 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                     value /= 100m;
                 }
 
-                observations.Add(new ScalarObservation(date, value, "decimal"));
+                observations.Add(new ScalarObservation(
+                    date, value, _options.NormalizePercentToDecimal ? "decimal" : "unknown"));
             }
 
             _logger.LogInformation(
@@ -155,7 +189,7 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                 request.SeriesId);
 
             var issues = new List<DataIssue>();
-            if (observations.Count == 0)
+            if (observations.Count == 0 && CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
             {
                 issues.Add(new DataIssue(new IssueCode("NO_DATA"), IssueSeverity.Error,
                     $"FRED returned 0 usable observations for series {request.SeriesId}."));
@@ -178,7 +212,7 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                 RetrievalMode: RetrievalMode.Api,
                 Freshness: FreshnessClass.EndOfDay,
                 RetrievedAtUtc: _clock.UtcNow,
-                SourceUrl: url,
+                SourceUrl: sourceUrl,
                 DataDate: observations.Count > 0 ? observations.Max(o => o.Date) : null);
 
             return new DataEnvelope<IReadOnlyList<ScalarObservation>>(
@@ -187,9 +221,13 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch FRED series {SeriesId}", request.SeriesId);
+            _logger.LogError("Failed to fetch FRED series {SeriesId} ({ErrorType})", request.SeriesId, ex.GetType().Name);
 
             var errorCoverage = new DataCoverage(
                 RequestedPoints: 0,
@@ -198,7 +236,7 @@ public sealed class FredEconomicSeriesAdapter : IDataSourceAdapter<EconomicSerie
                 CoverageRatio: 0m);
 
             var errorIssue = new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error,
-                $"Failed to fetch FRED series {request.SeriesId}: {ex.Message}");
+                $"Failed to fetch FRED series {request.SeriesId}.");
 
             return new DataEnvelope<IReadOnlyList<ScalarObservation>>(
                 Payload: [],

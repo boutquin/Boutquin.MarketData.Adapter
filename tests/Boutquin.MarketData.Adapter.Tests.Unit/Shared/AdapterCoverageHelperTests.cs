@@ -14,6 +14,7 @@
 //  limitations under the License.
 //
 
+using System.Xml.Linq;
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Diagnostics;
 using Boutquin.MarketData.Abstractions.Requests;
@@ -30,6 +31,21 @@ public sealed class AdapterCoverageHelperTests
 {
     private static readonly IBusinessCalendar s_weekendOnly = new WeekendOnlyCalendar("TEST");
     private static readonly IBusinessCalendar s_usny = HolidayCalendarFactory.Create("USNY");
+
+    [Fact]
+    public void Compute_xml_documents_daily_only_gap_classification()
+    {
+        var xmlPath = Path.ChangeExtension(typeof(AdapterCoverageHelper).Assembly.Location, ".xml");
+        var documentation = XDocument.Load(xmlPath);
+        var method = documentation.Descendants("member").Single(member =>
+            ((string?)member.Attribute("name"))?.StartsWith(
+                "M:Boutquin.MarketData.Adapter.Shared.AdapterCoverageHelper.Compute(",
+                StringComparison.Ordinal) == true);
+        var description = string.Join(" ", method.Elements().Select(element => element.Value));
+
+        description.Should().Contain("daily").And.Contain("gap issues");
+        description.Should().Contain("non-daily").And.Contain("empty");
+    }
 
     [Fact]
     public void Full_week_complete_returns_ratio_one()

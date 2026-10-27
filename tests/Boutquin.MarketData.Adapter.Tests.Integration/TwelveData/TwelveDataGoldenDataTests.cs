@@ -56,15 +56,16 @@ public sealed class TwelveDataGoldenDataTests
         // Assert — values are strings in JSON but parsed to decimal/long
         result.Payload.Should().HaveCount(3);
 
-        // Twelve Data returns values in reverse chronological order
+        // The adapter normalizes Twelve Data's descending API response to ascending
+        // (chronological) order — see the sort rationale in TwelveDataPriceBarAdapter.
         var bar0 = result.Payload[0];
-        bar0.Date.Should().Be(new DateOnly(2024, 1, 4));
-        bar0.Open.Should().Be(182.15m);
-        bar0.High.Should().Be(183.09m);
-        bar0.Low.Should().Be(180.88m);
-        bar0.Close.Should().Be(181.91m);
-        bar0.AdjustedClose.Should().Be(181.91m); // No adjClose in Twelve Data; close is used
-        bar0.Volume.Should().Be(71878500L);
+        bar0.Date.Should().Be(new DateOnly(2024, 1, 2));
+        bar0.Open.Should().Be(187.15m);
+        bar0.High.Should().Be(188.44m);
+        bar0.Low.Should().Be(183.89m);
+        bar0.Close.Should().Be(185.64m);
+        bar0.AdjustedClose.Should().Be(185.64m); // No adjClose in Twelve Data; close is used
+        bar0.Volume.Should().Be(82488700L);
 
         var bar1 = result.Payload[1];
         bar1.Date.Should().Be(new DateOnly(2024, 1, 3));
@@ -76,12 +77,12 @@ public sealed class TwelveDataGoldenDataTests
         bar1.Volume.Should().Be(58414500L);
 
         var bar2 = result.Payload[2];
-        bar2.Date.Should().Be(new DateOnly(2024, 1, 2));
-        bar2.Open.Should().Be(187.15m);
-        bar2.High.Should().Be(188.44m);
-        bar2.Low.Should().Be(183.89m);
-        bar2.Close.Should().Be(185.64m);
-        bar2.AdjustedClose.Should().Be(185.64m);
-        bar2.Volume.Should().Be(82488700L);
+        bar2.Date.Should().Be(new DateOnly(2024, 1, 4));
+        bar2.Open.Should().Be(182.15m);
+        bar2.High.Should().Be(183.09m);
+        bar2.Low.Should().Be(180.88m);
+        bar2.Close.Should().Be(181.91m);
+        bar2.AdjustedClose.Should().Be(181.91m);
+        bar2.Volume.Should().Be(71878500L);
     }
 }

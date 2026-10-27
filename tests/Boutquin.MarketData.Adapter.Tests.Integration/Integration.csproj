@@ -8,6 +8,13 @@
     <PackageReference Include="Boutquin.MarketData.Calendars" />
     <PackageReference Include="Boutquin.MarketData.Transport" />
     <PackageReference Include="Boutquin.MarketData.Storage" />
+    <!--
+      Test-only: lets an integration test compose the real kernel pipeline over the real adapter
+      registrations. Deliberately absent from every shipped adapter package — adapters must not
+      depend on the orchestration or composition layers.
+    -->
+    <PackageReference Include="Boutquin.MarketData.Orchestration" />
+    <PackageReference Include="Boutquin.MarketData.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />

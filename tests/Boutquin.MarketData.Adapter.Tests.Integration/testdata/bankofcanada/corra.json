@@ -1,11 +1,71 @@
 {
   "terms": {
-    "url": "https://www.bankofcanada.ca/valet/terms"
+    "url": "https://www.bankofcanada.ca/terms/"
   },
-  "seriesDetail": {},
+  "groupDetail": {
+    "label": "Canadian Overnight Repo Rate Average (CORRA)",
+    "description": "The daily published series showing CORRA and the associated trimmed trading volume.",
+    "link": "https://www.bankofcanada.ca/?p=212119",
+    "metadata": {
+      "unit": "Varies by series",
+      "frequency": "Business daily"
+    }
+  },
+  "seriesDetail": {
+    "AVG.INTWO": {
+      "label": "Canadian Overnight Repo Rate Average (CORRA)",
+      "description": "A measure of the cost of overnight general collateral funding in Canadian dollars using Government of Canada treasury bills and bonds as collateral for repurchase transactions (repos).",
+      "dimension": {
+        "key": "d",
+        "name": "Date"
+      },
+      "dateFormat": "daily",
+      "metadata": {
+        "unit": "Percent",
+        "frequency": "Business daily"
+      }
+    },
+    "CORRA_TRIMMED_VOLUME": {
+      "label": "CORRA: trimmed dollar volume of trades eligible",
+      "description": "The total nominal value of CORRA transactions after trimming the bottom 25 percent.",
+      "dimension": {
+        "key": "d",
+        "name": "Date"
+      },
+      "dateFormat": "daily",
+      "metadata": {
+        "unit": "Canadian dollars (CAD)",
+        "frequency": "Business daily"
+      }
+    }
+  },
   "observations": [
-    {"d": "2024-01-02", "CORRA_GRAPH.CORRA": {"v": "4.95"}},
-    {"d": "2024-01-03", "CORRA_GRAPH.CORRA": {"v": "4.96"}},
-    {"d": "2024-01-04", "CORRA_GRAPH.CORRA": {"v": "4.95"}}
+    {
+      "d": "2024-01-02",
+      "AVG.INTWO": {
+        "v": "5.0500"
+      },
+      "CORRA_TRIMMED_VOLUME": {
+        "v": "14295473503"
+      }
+    },
+    {
+      "d": "2024-01-03",
+      "AVG.INTWO": {
+        "v": "5.0500"
+      },
+      "CORRA_TRIMMED_VOLUME": {
+        "v": "14392833854"
+      }
+    },
+    {
+      "d": "2024-01-04",
+      "AVG.INTWO": {
+        "v": "5.0400"
+      },
+      "CORRA_TRIMMED_VOLUME": {
+        "v": "13314418117"
+      }
+    }
   ]
 }

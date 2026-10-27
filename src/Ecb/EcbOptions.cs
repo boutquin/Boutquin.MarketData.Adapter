@@ -27,7 +27,13 @@ public sealed class EcbOptions
     public string BaseUrl { get; set; } = "https://data-api.ecb.europa.eu/service/data";
 
     /// <summary>
-    /// The SDMX series key used to retrieve the Euro Short-Term Rate (EUR/STR) fixing data.
+    /// The SDMX series key used to retrieve the Euro Short-Term Rate (€STR) fixing data, as
+    /// <c>{dataflow}/{series key}</c>. Defaults to <c>EST/B.EU000A2X2A25.WT</c>, the ECB's
+    /// "Euro short-term rate — volume-weighted trimmed mean rate" series.
     /// </summary>
-    public string EstrSeriesKey { get; set; } = "FM/B.U2.EUR.4F.KR.DFR.LEV";
+    /// <remarks>
+    /// This adapter only serves ESTR requests and rejects other series keys. The series starts
+    /// 2019-10-01 (€STR launch).
+    /// </remarks>
+    public string EstrSeriesKey { get; set; } = "EST/B.EU000A2X2A25.WT";
 }

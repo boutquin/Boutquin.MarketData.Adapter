@@ -33,10 +33,11 @@ public sealed class BankOfEnglandGoldenDataTests
     [Fact]
     public async Task BankOfEngland_SONIA_parses_golden_snapshot()
     {
-        // Arrange
+        // Arrange — the snapshot is the IADB CSV export for IUDSOIA, 02..04 Jan 2024, captured
+        // 2026-09-21 (`* text=auto` normalises its CRLF on commit; the unit tests cover CRLF).
         var goldenData = GoldenFileHelper.LoadText("testdata/boe/sonia.csv");
         var transport = new FakeHttpDataTransport();
-        transport.RespondTo("SeriesCodes=IUDSNKY", goldenData);
+        transport.RespondTo("SeriesCodes=IUDSOIA&CSVF=TN&UsingCodes=Y", goldenData);
         var rawStore = new FakeRawDocumentStore();
         var adapter = new BankOfEnglandSoniaAdapter(
             transport,
@@ -57,15 +58,19 @@ public sealed class BankOfEnglandGoldenDataTests
         result.Payload.Should().HaveCount(3);
 
         result.Payload[0].Date.Should().Be(new DateOnly(2024, 1, 2));
-        result.Payload[0].Value.Should().Be(0.0519m);
+        result.Payload[0].Value.Should().Be(0.051863m);
         result.Payload[0].Units.Should().Be("decimal-rate");
 
         result.Payload[1].Date.Should().Be(new DateOnly(2024, 1, 3));
-        result.Payload[1].Value.Should().Be(0.0518m);
+        result.Payload[1].Value.Should().Be(0.051863m);
         result.Payload[1].Units.Should().Be("decimal-rate");
 
         result.Payload[2].Date.Should().Be(new DateOnly(2024, 1, 4));
-        result.Payload[2].Value.Should().Be(0.0519m);
+        result.Payload[2].Value.Should().Be(0.05187m);
         result.Payload[2].Units.Should().Be("decimal-rate");
+
+        transport.RequestedUris.Should().ContainSingle()
+            .Which.OriginalString.Should().Be(
+                "https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&SeriesCodes=IUDSOIA&CSVF=TN&UsingCodes=Y&Datefrom=02/Jan/2024&Dateto=04/Jan/2024");
     }
 }

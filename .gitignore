@@ -375,7 +375,7 @@ FodyWeavers.xsd
 # Claude Code
 sessions/
 CLAUDE.local.md
-specs/
+.build-arena/
 
 # JetBrains Rider
 .idea/
@@ -385,3 +385,16 @@ specs/
 
 # macOS
 .DS_Store
+
+# Arena run EVIDENCE is git-tracked (findings, verdicts, fixes, audits, ledger).
+# Ignore ONLY machine state. Never add a bare `.code-arena/` line.
+.code-arena/locks/
+.code-arena/**/reduced-supervisor-state.json
+.code-arena/**/preflight-ok.txt
+.code-arena/**/.preflight
+.code-arena/**/PENDING-SPAWNS.md
+.code-arena/**/__pycache__/
+.code-arena/**/*.pyc
+!.code-arena/**/*.log
+.code-arena/**/reference.txt
+.code-arena/reference/

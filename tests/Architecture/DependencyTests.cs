@@ -36,6 +36,7 @@ public sealed class DependencyTests : BaseArchitectureTest
 
             var result = Types
                 .InAssembly(assembly)
+                .That().DoNotResideInNamespace("Coverlet.Core.Instrumentation")
                 .Should()
                 .NotHaveDependencyOnAny(otherAdapters)
                 .GetResult();
@@ -52,6 +53,7 @@ public sealed class DependencyTests : BaseArchitectureTest
         {
             var result = Types
                 .InAssembly(assembly)
+                .That().DoNotResideInNamespace("Coverlet.Core.Instrumentation")
                 .Should()
                 .NotHaveDependencyOnAny(
                     "Boutquin.MarketData.Orchestration",
@@ -70,6 +72,7 @@ public sealed class DependencyTests : BaseArchitectureTest
         {
             var result = Types
                 .InAssembly(assembly)
+                .That().DoNotResideInNamespace("Coverlet.Core.Instrumentation")
                 .Should()
                 .NotHaveDependencyOnAny(
                     "Boutquin.Analytics",

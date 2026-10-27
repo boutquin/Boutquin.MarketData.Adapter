@@ -38,11 +38,20 @@ namespace Boutquin.MarketData.Adapter.BankOfEngland;
 /// with provenance metadata.
 /// </summary>
 /// <remarks>
-/// The adapter calls the IADB CSV export endpoint, which returns a header line followed by
-/// rows of <c>"DD MMM YY",rate</c>. Rates are published as percentages (e.g., 5.19 for 5.19%)
-/// and are converted to decimal form (divided by 100) before being returned. Lines with empty
-/// or unparseable values are silently skipped, as the Bank of England omits fixings on
-/// non-business days.
+/// <para>
+/// The adapter calls the IADB CSV export
+/// (<c>_iadb-fromshowcolumns.asp?csv.x=yes&amp;SeriesCodes={code}&amp;CSVF=TN&amp;UsingCodes=Y&amp;Datefrom=…&amp;Dateto=…</c>),
+/// which answers with a <c>DATE,{code}</c> header followed by one <c>DD MMM YYYY,rate</c> row per
+/// business day (CRLF line endings, no quoting). Non-business days are simply absent. Rates are
+/// published as percentages (e.g., 5.1863 for 5.1863%) and are converted to decimal form
+/// (divided by 100) before being returned; rows with an empty or unparseable value are skipped.
+/// </para>
+/// <para>
+/// <c>UsingCodes=Y</c> is load-bearing: without it the IADB does not read <c>SeriesCodes</c> as
+/// series codes and redirects to an HTML error page served as HTTP 200. The adapter therefore
+/// checks that the body starts with the <c>DATE,</c> header and reports anything else as a
+/// <c>SCHEMA_MISMATCH</c> error rather than as an empty series.
+/// </para>
 /// </remarks>
 public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixingRequest, ScalarObservation>, IPrioritizedAdapter
 {
@@ -78,24 +87,42 @@ public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixi
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>boe-sonia</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("boe-sonia");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(OvernightFixingRequest request) =>
-        string.Equals(request.BenchmarkId.Value, "SONIA", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for the SONIA benchmark.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(OvernightFixingRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return string.Equals(request.BenchmarkId.Value, "SONIA", StringComparison.OrdinalIgnoreCase);
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves SONIA overnight fixings within the requested dates from Bank of England.</summary>
+    /// <param name="request">Daily requests for the SONIA benchmark.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<ScalarObservation>>> FetchAsync(
         OvernightFixingRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("The Bank of England SONIA adapter requires a SONIA request.", nameof(request));
+        }
+
         var fromDate = request.Range.From.ToString("dd/MMM/yyyy", CultureInfo.InvariantCulture);
         var toDate = request.Range.To.ToString("dd/MMM/yyyy", CultureInfo.InvariantCulture);
-        var url = $"{_options.BaseUrl}/_iadb-fromshowcolumns.asp?csv.x=yes&SeriesCodes={_options.SoniaSeriesCode}&CSVF=TN&Datefrom={fromDate}&Dateto={toDate}";
+        var url = $"{_options.BaseUrl.TrimEnd('/')}/_iadb-fromshowcolumns.asp?csv.x=yes&SeriesCodes={_options.SoniaSeriesCode}&CSVF=TN&UsingCodes=Y&Datefrom={fromDate}&Dateto={toDate}";
 
         try
         {
@@ -109,31 +136,36 @@ public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixi
             }
 
             await _rawStore.SaveAsync(
-                $"boe/sonia/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}",
+                $"boe/sonia/{request.Range.From.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}-{request.Range.To.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}",
                 csv,
                 cancellationToken).ConfigureAwait(false);
 
             var issues = new List<DataIssue>();
             var observations = new List<ScalarObservation>();
 
-            var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            // Skip the header line (e.g., "DATE,IUDSNKY").
+            // The IADB serves its error page (bad series code, missing UsingCodes=Y) as HTTP 200
+            // HTML, so a non-CSV body must be reported as a schema failure, not as an empty series.
+            if (lines.Length == 0 ||
+                !string.Equals(lines[0], $"DATE,{_options.SoniaSeriesCode}", StringComparison.OrdinalIgnoreCase))
+            {
+                return BuildErrorEnvelope(
+                    "SCHEMA_MISMATCH",
+                    "Bank of England response is not the IADB CSV export (expected a DATE,{series} header).",
+                    url);
+            }
+
+            // Skip the header line ("DATE,IUDSOIA").
             for (var i = 1; i < lines.Length; i++)
             {
-                var line = lines[i].Trim();
-                if (string.IsNullOrEmpty(line))
-                {
-                    continue;
-                }
-
-                var parts = line.Split(',');
+                var parts = lines[i].Split(',');
                 if (parts.Length < 2)
                 {
                     continue;
                 }
 
-                // Date is quoted: "02 Jan 24"
+                // Rows are unquoted: 02 Jan 2024,5.1863
                 var dateStr = parts[0].Trim('"', ' ');
                 var valueStr = parts[1].Trim('"', ' ');
 
@@ -143,7 +175,12 @@ public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixi
                     continue;
                 }
 
-                if (!DateOnly.TryParseExact(dateStr, "dd MMM yy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                if (!DateOnly.TryParseExact(dateStr, "dd MMM yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                {
+                    continue;
+                }
+
+                if (date < request.Range.From || date > request.Range.To)
                 {
                     continue;
                 }
@@ -157,7 +194,8 @@ public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixi
                 "Fetched {Count} SONIA fixings from Bank of England",
                 observations.Count);
 
-            if (observations.Count == 0 && issues.Count == 0)
+            if (observations.Count == 0 && issues.Count == 0
+                && CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
             {
                 issues.Add(new DataIssue(new IssueCode("NO_OBSERVATIONS"), IssueSeverity.Error,
                     "No parseable SONIA fixings found in the Bank of England response."));
@@ -184,26 +222,33 @@ public sealed class BankOfEnglandSoniaAdapter : IDataSourceAdapter<OvernightFixi
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch SONIA fixings from Bank of England");
 
-            return new DataEnvelope<IReadOnlyList<ScalarObservation>>(
-                Payload: Array.Empty<ScalarObservation>(),
-                Coverage: new DataCoverage(
-                    RequestedPoints: 1,
-                    ReturnedPoints: 0,
-                    MissingPoints: 1,
-                    CoverageRatio: 0m),
-                Issues: [new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error, $"Bank of England SONIA fetch failed: {ex.Message}")],
-                Provenance: [new DataProvenance(
-                    Provider: new ProviderCode("boe-sonia"),
-                    Dataset: "SONIA",
-                    LicenseFlag: LicenseType.Free,
-                    RetrievalMode: RetrievalMode.Api,
-                    Freshness: FreshnessClass.Unknown,
-                    RetrievedAtUtc: _clock.UtcNow,
-                    SourceUrl: url)]);
+            return BuildErrorEnvelope("FETCH_FAILED", "Bank of England SONIA fetch failed.", url);
         }
     }
+
+    private DataEnvelope<IReadOnlyList<ScalarObservation>> BuildErrorEnvelope(string code, string message, string url) =>
+        new(
+            Payload: Array.Empty<ScalarObservation>(),
+            Coverage: new DataCoverage(
+                RequestedPoints: 1,
+                ReturnedPoints: 0,
+                MissingPoints: 1,
+                CoverageRatio: 0m),
+            Issues: [new DataIssue(new IssueCode(code), IssueSeverity.Error, message)],
+            Provenance: [new DataProvenance(
+                Provider: new ProviderCode("boe-sonia"),
+                Dataset: "SONIA",
+                LicenseFlag: LicenseType.Free,
+                RetrievalMode: RetrievalMode.Api,
+                Freshness: FreshnessClass.Unknown,
+                RetrievedAtUtc: _clock.UtcNow,
+                SourceUrl: url)]);
 }

@@ -38,10 +38,11 @@ namespace Boutquin.MarketData.Adapter.Frankfurter;
 /// </summary>
 /// <remarks>
 /// Frankfurter provides free, unauthenticated access to daily ECB reference rates.
-/// This adapter iterates over each requested currency pair, fetches the time series
+/// This adapter accepts exactly one non-identity currency pair, fetches the time series
 /// from the API, persists the raw JSON response, and parses it into canonical
 /// <see cref="FxRate"/> records. Pairs that fail are logged as warnings and reported
-/// as <see cref="DataIssue"/> entries without aborting the remaining pairs.
+/// as <see cref="DataIssue"/> entries. Partition batches before dispatch because
+/// <see cref="FxRate"/> does not carry pair ownership.
 /// </remarks>
 public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, FxRate>, IPrioritizedAdapter
 {
@@ -77,31 +78,52 @@ public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, 
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>frankfurter</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("frankfurter");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(FxHistoryRequest request) =>
-        request.Frequency == DataFrequency.Daily && request.Pairs.Count > 0;
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for exactly one non-identity currency pair.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(FxHistoryRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Frequency == DataFrequency.Daily && request.Pairs.Count == 1
+            && request.Pairs[0].BaseCurrency != request.Pairs[0].QuoteCurrency;
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves daily reference FX observations for one currency pair from Frankfurter.</summary>
+    /// <param name="request">Daily requests for exactly one non-identity currency pair.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<FxRate>>> FetchAsync(
         FxHistoryRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Frankfurter fetches require one non-identity currency pair and daily frequency. Partition batches before dispatch.", nameof(request));
+        }
+
         var allRates = new List<FxRate>();
         var provenance = new List<DataProvenance>();
         var issues = new List<DataIssue>();
+        var coverages = new List<DataCoverage>();
         var pairsWithData = 0;
 
         foreach (var pair in request.Pairs)
         {
-            var url = $"{_options.BaseUrl.TrimEnd('/')}/{request.Range.From:yyyy-MM-dd}..{request.Range.To:yyyy-MM-dd}" +
+            var url = $"{_options.BaseUrl.TrimEnd('/')}/{request.Range.From.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}..{request.Range.To.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}" +
                       $"?base={pair.BaseCurrency}&symbols={pair.QuoteCurrency}";
 
+            List<FxRate> pairRates = [];
             try
             {
                 var uri = new Uri(url);
@@ -109,10 +131,12 @@ public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, 
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-                var rawKey = $"frankfurter/fx/{pair.BaseCurrency}-{pair.QuoteCurrency}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}";
+                var rawKey = $"frankfurter/fx/{pair.BaseCurrency}-{pair.QuoteCurrency}/{request.Range.From.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}-{request.Range.To.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}";
                 await _rawStore.SaveAsync(rawKey, json, cancellationToken).ConfigureAwait(false);
 
-                var pairRates = ParseRates(json, pair);
+                pairRates = ParseRates(json, pair)
+                    .Where(rate => rate.Date >= request.Range.From && rate.Date <= request.Range.To)
+                    .ToList();
                 allRates.AddRange(pairRates);
 
                 if (pairRates.Count > 0)
@@ -140,18 +164,24 @@ public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, 
                     SourceUrl: url,
                     DataDate: pairRates.Count > 0 ? pairRates.Max(r => r.Date) : null));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to fetch FX rates for {Pair} from Frankfurter", pair);
                 issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error,
-                    $"Failed to fetch rates for {pair}: {ex.Message}"));
+                    $"Failed to fetch rates for {pair}."));
             }
+
+            var (pairCoverage, pairGapIssues) = AdapterCoverageHelper.Compute(
+                _calendar, request.Range, request.Frequency, pairRates.Select(r => r.Date).ToHashSet());
+            coverages.Add(pairCoverage);
+            issues.AddRange(pairGapIssues);
         }
 
-        var returnedDates = allRates.Select(r => r.Date).ToHashSet();
-        var (coverage, gapIssues) = AdapterCoverageHelper.Compute(
-            _calendar, request.Range, request.Frequency, returnedDates);
-        issues.AddRange(gapIssues);
+        var coverage = CoverageComputation.Aggregate(coverages);
 
         return new DataEnvelope<IReadOnlyList<FxRate>>(
             Payload: allRates,
@@ -169,6 +199,21 @@ public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, 
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
+
+        // Legacy snapshots can omit base; an explicitly supplied base may never contradict
+        // the requested pair. The provider's v1 response defines base as the rate denominator.
+        if (root.TryGetProperty("base", out var responseBase)
+            && (responseBase.ValueKind != JsonValueKind.String
+                || !string.Equals(responseBase.GetString(), pair.BaseCurrency.ToString(), StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new FormatException("Frankfurter returned a different base currency.");
+        }
+
+        if (root.TryGetProperty("amount", out var amount)
+            && (amount.ValueKind != JsonValueKind.Number || !amount.TryGetDecimal(out var amountValue) || amountValue != 1m))
+        {
+            throw new FormatException("Frankfurter returned a non-unit rate amount.");
+        }
 
         if (!root.TryGetProperty("rates", out var ratesElement) ||
             ratesElement.ValueKind != JsonValueKind.Object)
@@ -191,7 +236,7 @@ public sealed class FrankfurterFxAdapter : IDataSourceAdapter<FxHistoryRequest, 
             if (dateProperty.Value.TryGetProperty(pair.QuoteCurrency.ToString(), out var rateElement) &&
                 rateElement.TryGetDecimal(out var rate))
             {
-                rates.Add(new FxRate(date, pair.BaseCurrency, pair.QuoteCurrency, rate));
+                rates.Add(new FxRate(date, rate));
             }
         }
 

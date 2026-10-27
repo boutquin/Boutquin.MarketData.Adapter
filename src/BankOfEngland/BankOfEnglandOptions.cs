@@ -32,7 +32,14 @@ public sealed class BankOfEnglandOptions
     public string BaseUrl { get; set; } = "https://www.bankofengland.co.uk/boeapps/database";
 
     /// <summary>
-    /// The IADB series code for the SONIA overnight rate.
+    /// The IADB series code for the SONIA overnight rate. Defaults to <c>IUDSOIA</c>, the series
+    /// the IADB titles "Daily Sterling overnight index average (SONIA) rate" (history from
+    /// 1997-01-02).
     /// </summary>
-    public string SoniaSeriesCode { get; set; } = "IUDSNKY";
+    /// <remarks>
+    /// The adapter sends this value as <c>SeriesCodes</c> together with <c>UsingCodes=Y</c>; a
+    /// code the IADB does not recognise is answered with a redirect to an HTML error page
+    /// ("Invalid series code value supplied"), which the adapter reports as <c>SCHEMA_MISMATCH</c>.
+    /// </remarks>
+    public string SoniaSeriesCode { get; set; } = "IUDSOIA";
 }

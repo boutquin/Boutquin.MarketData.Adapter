@@ -15,13 +15,16 @@
 //
 
 using Boutquin.MarketData.Abstractions.Calendars;
+using Boutquin.MarketData.Abstractions.Diagnostics;
+using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
+using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
+using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Adapter.Tests.Shared;
 using Boutquin.MarketData.Adapter.Tiingo;
 using Boutquin.MarketData.Calendars;
-using Boutquin.MarketData.Abstractions.Provenance;
-using Boutquin.MarketData.Abstractions.ReferenceData;
+using Boutquin.MarketData.Calendars.Holidays;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -74,9 +77,47 @@ public sealed class TiingoPriceBarAdapterTests
     }
 
     [Fact]
-    public void CanHandle_returns_false_for_empty_symbols()
+    public void Empty_symbols_are_rejected_at_the_request_boundary()
     {
-        var request = new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily);
+        Action act = () => new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily);
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .Which.ParamName.Should().Be("symbols.Count");
+    }
+
+    // ---------- Exchange-hint filtering (CA research regression defense) ----------
+
+    [Fact]
+    public void CanHandle_returns_true_when_Exchange_is_null_preserving_back_compat()
+    {
+        // Callers that do not set Exchange must continue to work — this keeps every
+        // existing consumer unaffected by the 1.1.0 Exchange-hint addition.
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(ExchangeCode.XNYS)]
+    [InlineData(ExchangeCode.XNAS)]
+    public void CanHandle_returns_true_for_supported_US_exchanges(ExchangeCode exchange)
+    {
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Exchange = exchange };
+        CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(ExchangeCode.XTSE)]
+    [InlineData(ExchangeCode.NEOE)]
+    [InlineData(ExchangeCode.XLON)]
+    [InlineData(ExchangeCode.XPAR)]
+    public void CanHandle_returns_false_for_non_US_exchanges(ExchangeCode exchange)
+    {
+        // 2026-04-19 regression: bare "XIC" (Exchange: null) went to Tiingo and returned
+        // Cimarex Energy Company — an unrelated US equity that shares the 3-letter symbol
+        // with iShares S&P/TSX Capped Composite ETF. With the Exchange hint set to XTSE,
+        // the adapter now self-excludes from CanHandle and the orchestrator routes to
+        // TwelveData instead of returning garbage.
+        var request = new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = exchange };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
@@ -102,6 +143,76 @@ public sealed class TiingoPriceBarAdapterTests
         result.Payload[0].Should().Be(new Bar(new DateOnly(2024, 1, 2), 185.50m, 187.30m, 184.20m, 186.90m, 186.90m, 52000000));
         result.Payload[1].Should().Be(new Bar(new DateOnly(2024, 1, 3), 186.80m, 188.10m, 185.50m, 187.50m, 187.50m, 48000000));
         rawStore.SavedKeys.Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData("../iex/price")]
+    [InlineData("AAPL/MSFT")]
+    [InlineData("AAPL?token=attacker")]
+    public async Task FetchAsync_rejects_provider_invalid_ticker_before_transport_or_raw_persistence(string ticker)
+    {
+        var transport = new FakeHttpDataTransport();
+        var rawStore = new FakeRawDocumentStore();
+        var adapter = CreateAdapter(transport, rawStore);
+
+        Func<Task> act = () => adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithParameterName("request");
+        transport.RequestedUris.Should().BeEmpty();
+        rawStore.SavedKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FetchAsync_rejects_ticker_exceeding_the_raw_store_segment_boundary()
+    {
+        var transport = new FakeHttpDataTransport();
+        var rawStore = new FakeRawDocumentStore();
+        var adapter = CreateAdapter(transport, rawStore);
+
+        Func<Task> act = () => adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol(new string('A', 251))], MakeRange()),
+            CancellationToken.None);
+
+        await act.Should().ThrowExactlyAsync<ArgumentException>()
+            .WithParameterName("request");
+        transport.RequestedUris.Should().BeEmpty();
+        rawStore.SavedKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FetchAsync_accepts_ticker_at_the_raw_store_segment_boundary()
+    {
+        var ticker = new string('A', 250);
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo($"tiingo/daily/{ticker}/prices", "[]");
+        var adapter = CreateAdapter(transport);
+
+        var result = await adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            CancellationToken.None);
+
+        transport.RequestedUris.Should().ContainSingle();
+        result.Issues.Should().NotContain(issue => issue.Code == new IssueCode("FETCH_FAILED"));
+    }
+
+    [Theory]
+    [InlineData("BRK-B")]
+    [InlineData("BF.B")]
+    public async Task FetchAsync_preserves_legitimate_Tiingo_ticker_endpoint(string ticker)
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo($"tiingo/daily/{ticker}/prices", "[]");
+        var adapter = CreateAdapter(transport);
+
+        await adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            CancellationToken.None);
+
+        transport.RequestedUris.Should().ContainSingle()
+            .Which.AbsolutePath.Should().Be($"/tiingo/daily/{ticker}/prices");
     }
 
     [Fact]
@@ -137,22 +248,45 @@ public sealed class TiingoPriceBarAdapterTests
     }
 
     [Fact]
-    public async Task FetchAsync_continues_on_per_symbol_failure()
+    public async Task FetchAsync_records_a_single_symbol_failure()
     {
-        var json = """
-            [{"date":"2024-01-02T00:00:00+00:00","open":100.0,"high":101.0,"low":99.0,"close":100.5,"adjClose":100.5,"volume":1000}]
-            """;
-
         var transport = new FakeHttpDataTransport();
-        transport.RespondTo("MSFT", json);
         // No response for AAPL — will throw HttpRequestException
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL"), new Symbol("MSFT")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
 
-        // MSFT should succeed, AAPL should fail gracefully
-        result.Payload.Should().HaveCount(1);
-        result.Issues.Should().NotBeEmpty();
+        result.Payload.Should().BeEmpty();
+        result.Issues.Should().ContainSingle(issue => issue.Code == new IssueCode("FETCH_FAILED"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_propagates_caller_cancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var transport = new FakeHttpDataTransport();
+        transport.ThrowOnNext(new OperationCanceledException(cancellation.Token));
+        var adapter = CreateAdapter(transport);
+
+        Func<Task> act = () => adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchAsync_keeps_transport_exception_detail_out_of_consumer_issues()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.ThrowOnNext(new IOException("credential=secret; path=/srv/private/raw.json"));
+        var adapter = CreateAdapter(transport);
+
+        var result = await adapter.FetchAsync(
+            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+
+        result.Issues.Should().ContainSingle(issue => issue.Code == new IssueCode("FETCH_FAILED"))
+            .Which.Message.Should().Be("Failed to fetch data for symbol 'AAPL'.");
     }
 
     [Fact]
@@ -167,5 +301,124 @@ public sealed class TiingoPriceBarAdapterTests
 
         result.Provenance.Should().ContainSingle();
         result.Provenance[0].Provider.Should().Be(new ProviderCode("tiingo"));
+    }
+
+    // ---------- Calendar-aware coverage (feature-calendar-aware-coverage) ----------
+
+    private static string TiingoBarJson(params (string date, decimal close)[] bars)
+    {
+        var sb = new System.Text.StringBuilder("[");
+        for (var i = 0; i < bars.Length; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append(System.Globalization.CultureInfo.InvariantCulture,
+                $$"""{"date":"{{bars[i].date}}T00:00:00+00:00","open":100,"high":{{Math.Max(101m, bars[i].close)}},"low":{{Math.Min(99m, bars[i].close)}},"close":{{bars[i].close}},"adjClose":{{bars[i].close}},"volume":1000}""");
+        }
+        sb.Append(']');
+        return sb.ToString();
+    }
+
+    [Fact]
+    public async Task FetchAsync_business_day_range_reports_complete_coverage()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("AAPL", TiingoBarJson(
+            ("2024-01-08", 100m), ("2024-01-09", 100m), ("2024-01-10", 100m),
+            ("2024-01-11", 100m), ("2024-01-12", 100m)));
+        var adapter = CreateAdapter(transport);
+
+        var request = new PriceHistoryRequest(
+            [new Symbol("AAPL")],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(5);
+        result.Coverage.ReturnedPoints.Should().Be(5);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_excludes_provider_bars_outside_inclusive_request_range()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("AAPL", TiingoBarJson(
+            ("2024-01-07", 100m), ("2024-01-08", 101m),
+            ("2024-01-12", 102m), ("2024-01-15", 103m)));
+        var adapter = CreateAdapter(transport);
+        var request = new PriceHistoryRequest(
+            [new Symbol("AAPL")],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Payload.Select(bar => bar.Date).Should().Equal(
+            new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12));
+        result.Provenance.Should().ContainSingle().Which.DataDate.Should().Be(new DateOnly(2024, 1, 12));
+    }
+
+    [Fact]
+    public async Task FetchAsync_weekend_only_range_reports_no_unexpected_gaps()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("AAPL", "[]");
+        var adapter = CreateAdapter(transport);
+
+        var request = new PriceHistoryRequest(
+            [new Symbol("AAPL")],
+            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(0);
+        result.Coverage.CoverageRatio.Should().Be(1.0m);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_holiday_within_range_is_not_flagged_as_gap()
+    {
+        // MLK Day 2024 = Mon Jan 15 (NYSE closed, USNY holiday).
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("AAPL", TiingoBarJson(
+            ("2024-01-16", 100m), ("2024-01-17", 100m),
+            ("2024-01-18", 100m), ("2024-01-19", 100m)));
+        var usny = HolidayCalendarFactory.Create("USNY");
+        var adapter = CreateAdapter(transport, calendar: usny);
+
+        var request = new PriceHistoryRequest(
+            [new Symbol("AAPL")],
+            new DateRange(new DateOnly(2024, 1, 15), new DateOnly(2024, 1, 19)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(4);
+        result.Coverage.ReturnedPoints.Should().Be(4);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_missing_business_day_emits_unexpected_gap()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("AAPL", TiingoBarJson(
+            ("2024-01-08", 100m), ("2024-01-09", 100m), ("2024-01-10", 100m)));
+        var adapter = CreateAdapter(transport);
+
+        var request = new PriceHistoryRequest(
+            [new Symbol("AAPL")],
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.Status.Should().Be(CompletenessStatus.Partial);
+        var gaps = result.Issues.Where(i => i.Code == new IssueCode("UNEXPECTED_GAP")).ToList();
+        gaps.Should().HaveCount(2);
     }
 }

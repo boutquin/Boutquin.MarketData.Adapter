@@ -85,21 +85,41 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>boc-corra</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("boc-corra");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(OvernightFixingRequest request) =>
-        string.Equals(request.BenchmarkId.Value, "CORRA", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for the CORRA benchmark.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(OvernightFixingRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return string.Equals(request.BenchmarkId.Value, "CORRA", StringComparison.OrdinalIgnoreCase);
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves CORRA overnight fixings within the requested dates from Bank of Canada.</summary>
+    /// <param name="request">Daily requests for the CORRA benchmark.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<ScalarObservation>>> FetchAsync(
         OvernightFixingRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("The Bank of Canada CORRA adapter requires a CORRA request.", nameof(request));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(_options.CorraSeriesCode, nameof(BankOfCanadaOptions.CorraSeriesCode));
+
         var fromDate = request.Range.From.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var toDate = request.Range.To.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var url = $"{_options.BaseUrl}/observations/group/{_options.CorraGroupName}/json?start_date={fromDate}&end_date={toDate}";
@@ -116,7 +136,7 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
             }
 
             await _rawStore.SaveAsync(
-                $"boc/corra/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}",
+                $"boc/corra/{request.Range.From.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}-{request.Range.To.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}",
                 json,
                 cancellationToken).ConfigureAwait(false);
 
@@ -142,32 +162,23 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
                         continue;
                     }
 
-                    // Iterate properties, skip "d", take the first property with a "v" sub-property.
                     decimal? rateDecimal = null;
-                    foreach (var property in element.EnumerateObject())
+                    var seriesName = _options.CorraSeriesCode;
+                    if (element.TryGetProperty(seriesName, out var series) &&
+                        series.ValueKind == JsonValueKind.Object &&
+                        series.TryGetProperty("v", out var vElement) &&
+                        vElement.ValueKind != JsonValueKind.Null)
                     {
-                        if (property.Name == "d")
+                        var rateString = vElement.GetString();
+                        if (rateString is not null &&
+                            decimal.TryParse(rateString, NumberStyles.Number, CultureInfo.InvariantCulture, out var percentRate))
                         {
-                            continue;
-                        }
-
-                        if (property.Value.ValueKind == JsonValueKind.Object &&
-                            property.Value.TryGetProperty("v", out var vElement) &&
-                            vElement.ValueKind != JsonValueKind.Null)
-                        {
-                            var rateString = vElement.GetString();
-                            if (rateString is not null &&
-                                decimal.TryParse(rateString, NumberStyles.Number, CultureInfo.InvariantCulture, out var percentRate))
-                            {
-                                // Convert from percentage to decimal form (e.g., 4.25 -> 0.0425).
-                                rateDecimal = percentRate / 100m;
-                            }
-
-                            break;
+                            // Convert from percentage to decimal form (e.g., 4.25 -> 0.0425).
+                            rateDecimal = percentRate / 100m;
                         }
                     }
 
-                    if (rateDecimal.HasValue)
+                    if (rateDecimal.HasValue && date >= request.Range.From && date <= request.Range.To)
                     {
                         observations.Add(new ScalarObservation(date, rateDecimal.Value, "decimal-rate"));
                     }
@@ -178,7 +189,7 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
                 "Fetched {Count} CORRA fixings from Bank of Canada",
                 observations.Count);
 
-            if (observations.Count == 0)
+            if (observations.Count == 0 && CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
             {
                 issues.Add(new DataIssue(new IssueCode("NO_DATA"), IssueSeverity.Error,
                     "Bank of Canada returned no CORRA fixings for the requested date range."));
@@ -205,6 +216,10 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch CORRA fixings from Bank of Canada");
@@ -216,7 +231,7 @@ public sealed class BankOfCanadaCorraAdapter : IDataSourceAdapter<OvernightFixin
                     ReturnedPoints: 0,
                     MissingPoints: 0,
                     CoverageRatio: 0m),
-                Issues: [new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error, $"Bank of Canada CORRA fetch failed: {ex.Message}")],
+                Issues: [new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error, "Bank of Canada CORRA fetch failed.")],
                 Provenance: [new DataProvenance(
                     Provider: new ProviderCode("boc-corra"),
                     Dataset: "CORRA",

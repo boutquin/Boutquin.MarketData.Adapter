@@ -22,7 +22,13 @@ namespace Boutquin.MarketData.Adapter.Frankfurter;
 public sealed class FrankfurterOptions
 {
     /// <summary>
-    /// Base URL for the Frankfurter API. Defaults to the public endpoint.
+    /// Base URL for the Frankfurter API, including the API version segment. Defaults to the
+    /// public <c>v1</c> endpoint.
     /// </summary>
-    public string BaseUrl { get; set; } = "https://api.frankfurter.dev";
+    /// <remarks>
+    /// The adapter appends the time-series path (<c>/{from}..{to}?base=…&amp;symbols=…</c>) directly
+    /// to this value, so an override must carry the version segment too. The service answers the
+    /// unversioned host root with HTTP 404.
+    /// </remarks>
+    public string BaseUrl { get; set; } = "https://api.frankfurter.dev/v1";
 }

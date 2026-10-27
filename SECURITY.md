@@ -4,8 +4,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| 0.1.x   | Yes       |
-| < 0.1   | No        |
+| 2.0 prerelease | Candidate fixes during qualification |
+| 1.0.x | Reports accepted; fixes evaluated against current development |
+| < 1.0 | No |
 
 ## Reporting a Vulnerability
 

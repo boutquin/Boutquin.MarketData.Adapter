@@ -25,17 +25,33 @@ internal sealed class FakeRawDocumentStore : IRawDocumentStore
 {
     private readonly Dictionary<string, string> _store = new();
 
-    public IReadOnlyDictionary<string, string> Store => _store;
+    public IReadOnlyDictionary<string, string> Store => new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(_store);
 
     public List<string> SavedKeys { get; } = [];
 
     public Task SaveAsync(string key, string content, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateKey(key);
         _store[key] = content;
         SavedKeys.Add(key);
         return Task.CompletedTask;
     }
 
-    public Task<string?> LoadAsync(string key, CancellationToken cancellationToken = default) =>
-        Task.FromResult(_store.TryGetValue(key, out var value) ? value : null);
+    public Task<string?> LoadAsync(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateKey(key);
+        return Task.FromResult(_store.TryGetValue(key, out var value) ? value : null);
+    }
+
+    private static void ValidateKey(string key)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        if (key.StartsWith('/') || key.StartsWith('\\') || (key.Length >= 2 && key[1] == ':') ||
+            key.Split(['/', '\\']).Any(segment => segment is "" or "." or ".."))
+        {
+            throw new ArgumentException("Invalid raw document key.", nameof(key));
+        }
+    }
 }

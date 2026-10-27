@@ -17,12 +17,13 @@
 using System.Globalization;
 using System.Text.Json;
 
+using Boutquin.Domain.Enumerations;
+
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Diagnostics;
 using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
-using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
 using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Adapter.Shared;
@@ -53,11 +54,11 @@ namespace Boutquin.MarketData.Adapter.BankOfCanada;
 /// </remarks>
 public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest, FxRate>, IPrioritizedAdapter
 {
-    private static readonly IReadOnlyDictionary<(CurrencyCode Base, CurrencyCode Quote), string> s_seriesMap =
-        new Dictionary<(CurrencyCode, CurrencyCode), string>
+    private static readonly IReadOnlyDictionary<(Currency Base, Currency Quote), string> s_seriesMap =
+        new Dictionary<(Currency, Currency), string>
         {
-            [(CurrencyCode.USD, CurrencyCode.CAD)] = "FXUSDCAD",
-            [(CurrencyCode.CAD, CurrencyCode.USD)] = "FXCADUSD",
+            [(Currency.USD, Currency.CAD)] = "FXUSDCAD",
+            [(Currency.CAD, Currency.USD)] = "FXCADUSD",
         };
 
     private readonly IHttpDataTransport _transport;
@@ -92,23 +93,40 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>boc-fx</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("boc-fx");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(FxHistoryRequest request) =>
-        request.Frequency == DataFrequency.Daily &&
-        request.Pairs.Count > 0 &&
-        request.Pairs.All(p => s_seriesMap.ContainsKey((p.BaseCurrency, p.QuoteCurrency)));
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for exactly one supported CAD/USD currency pair.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(FxHistoryRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.Frequency == DataFrequency.Daily && request.Pairs.Count == 1
+            && request.Pairs.All(p => s_seriesMap.ContainsKey((p.BaseCurrency, p.QuoteCurrency)));
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves daily CAD/USD or USD/CAD reference FX observations from Bank of Canada.</summary>
+    /// <param name="request">Daily requests for exactly one supported CAD/USD currency pair.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<FxRate>>> FetchAsync(
         FxHistoryRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        if (!CanHandle(request))
+        {
+            throw new ArgumentException("Bank of Canada FX fetches require one USD/CAD or CAD/USD pair and daily frequency because FxRate does not carry pair identity.", nameof(request));
+        }
+
         var allRates = new List<FxRate>();
         var provenance = new List<DataProvenance>();
         var issues = new List<DataIssue>();
@@ -127,10 +145,12 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
                 using var reader = new StreamReader(stream);
                 var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-                var rawKey = $"boc/fx/{seriesId}/{request.Range.From:yyyyMMdd}-{request.Range.To:yyyyMMdd}";
+                var rawKey = $"boc/fx/{seriesId}/{request.Range.From.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}-{request.Range.To.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}";
                 await _rawStore.SaveAsync(rawKey, json, cancellationToken).ConfigureAwait(false);
 
-                var pairRates = ParseRates(json, seriesId, pair);
+                var pairRates = ParseRates(json, seriesId)
+                    .Where(rate => rate.Date >= request.Range.From && rate.Date <= request.Range.To)
+                    .ToList();
                 allRates.AddRange(pairRates);
 
                 if (pairRates.Count > 0)
@@ -139,7 +159,7 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
                         "Fetched {Count} FX rates for {Pair} from Bank of Canada",
                         pairRates.Count, pair);
                 }
-                else
+                else if (CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
                 {
                     issues.Add(new DataIssue(new IssueCode("NO_RATES"), IssueSeverity.Warning,
                         $"Bank of Canada returned no rates for {pair}."));
@@ -155,11 +175,15 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
                     SourceUrl: url,
                     DataDate: pairRates.Count > 0 ? pairRates.Max(r => r.Date) : null));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to fetch FX rates for {Pair} from Bank of Canada", pair);
                 issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Error,
-                    $"Failed to fetch rates for {pair}: {ex.Message}"));
+                    $"Failed to fetch rates for {pair} from Bank of Canada."));
             }
         }
 
@@ -175,7 +199,7 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
             Provenance: provenance);
     }
 
-    private static List<FxRate> ParseRates(string json, string seriesId, FxPair pair)
+    private static List<FxRate> ParseRates(string json, string seriesId)
     {
         var rates = new List<FxRate>();
 
@@ -215,7 +239,7 @@ public sealed class BankOfCanadaFxAdapter : IDataSourceAdapter<FxHistoryRequest,
                 continue;
             }
 
-            rates.Add(new FxRate(date, pair.BaseCurrency, pair.QuoteCurrency, rate));
+            rates.Add(new FxRate(date, rate));
         }
 
         return rates;

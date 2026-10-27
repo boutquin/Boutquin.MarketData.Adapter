@@ -15,6 +15,7 @@
 //
 
 using System.Globalization;
+using System.Text;
 
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
@@ -75,6 +76,12 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
         IOptions<EcbOptions> options,
         ILogger<EcbEstrAdapter> logger)
     {
+        ArgumentNullException.ThrowIfNull(transport);
+        ArgumentNullException.ThrowIfNull(rawStore);
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(calendar);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
         _transport = transport;
         _rawStore = rawStore;
         _clock = clock;
@@ -83,21 +90,45 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>The stable <c>ecb-estr</c> provider identity attached to this adapter's provenance.</summary>
     public ProviderCode ProviderKey => new("ecb-estr");
 
-    /// <inheritdoc />
+    /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
-    /// <inheritdoc />
-    public bool CanHandle(OvernightFixingRequest request) =>
-        string.Equals(request.BenchmarkId.Value, "ESTR", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Checks the request against this provider's supported routing constraints without performing I/O.</summary>
+    /// <param name="request">Daily requests for the ESTR benchmark.</param>
+    /// <returns><see langword="true"/> when the request matches the adapter's declared support; this does not guarantee provider availability.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    public bool CanHandle(OvernightFixingRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return string.Equals(request.BenchmarkId.Value, "ESTR", StringComparison.OrdinalIgnoreCase);
+    }
 
-    /// <inheritdoc />
+    /// <summary>Retrieves euro short-term rate observations within the requested dates from ECB.</summary>
+    /// <param name="request">Daily requests for the ESTR benchmark.</param>
+    /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
+    /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
+    /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
+    /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<ScalarObservation>>> FetchAsync(
         OvernightFixingRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!CanHandle(request))
+        {
+            return BuildErrorEnvelope("UNSUPPORTED_BENCHMARK", "ECB adapter only supports ESTR requests.");
+        }
+
+        if (!string.Equals(_options.EstrSeriesKey, "EST/B.EU000A2X2A25.WT", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildErrorEnvelope("UNSUPPORTED_SERIES", "ECB series must identify the Euro short-term rate.");
+        }
+
         var url = string.Format(
             CultureInfo.InvariantCulture,
             "{0}/{1}?startPeriod={2:yyyy-MM-dd}&endPeriod={3:yyyy-MM-dd}&format=csvdata",
@@ -125,36 +156,53 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
                 request.Range.To);
             await _rawStore.SaveAsync(storeKey, csv, cancellationToken).ConfigureAwait(false);
 
-            var lines = csv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lines = SplitCsvRecords(csv);
             if (lines.Length == 0)
             {
                 return BuildErrorEnvelope("EMPTY_RESPONSE", "ECB returned an empty CSV response for ESTR.");
             }
 
             // Parse header to locate column indices.
-            var headerColumns = lines[0].Split(',');
+            if (!TryParseCsvLine(lines[0], out var headerColumns))
+            {
+                return BuildErrorEnvelope("SCHEMA_MISMATCH", "ECB CSV has an invalid header.");
+            }
+            var keyIndex = Array.FindIndex(headerColumns, c =>
+                string.Equals(c.Trim(), "KEY", StringComparison.OrdinalIgnoreCase));
             var timePeriodIndex = Array.FindIndex(headerColumns, c =>
                 string.Equals(c.Trim(), "TIME_PERIOD", StringComparison.OrdinalIgnoreCase));
             var obsValueIndex = Array.FindIndex(headerColumns, c =>
                 string.Equals(c.Trim(), "OBS_VALUE", StringComparison.OrdinalIgnoreCase));
 
-            if (timePeriodIndex < 0 || obsValueIndex < 0)
+            if (keyIndex < 0 || timePeriodIndex < 0 || obsValueIndex < 0)
             {
                 return BuildErrorEnvelope(
                     "SCHEMA_MISMATCH",
-                    "ECB CSV response is missing required TIME_PERIOD or OBS_VALUE columns.");
+                    "ECB CSV response is missing required KEY, TIME_PERIOD or OBS_VALUE columns.");
             }
 
             var observations = new List<ScalarObservation>();
             var skipped = 0;
+            var malformed = 0;
+            var mismatched = 0;
             var totalDataRows = lines.Length - 1;
 
             for (var i = 1; i < lines.Length; i++)
             {
-                var fields = lines[i].Split(',');
-                if (fields.Length <= Math.Max(timePeriodIndex, obsValueIndex))
+                if (!TryParseCsvLine(lines[i], out var fields))
+                {
+                    malformed++;
+                    continue;
+                }
+                if (fields.Length <= Math.Max(keyIndex, Math.Max(timePeriodIndex, obsValueIndex)))
                 {
                     skipped++;
+                    continue;
+                }
+
+                if (!string.Equals(fields[keyIndex].Trim(), "EST.B.EU000A2X2A25.WT", StringComparison.OrdinalIgnoreCase))
+                {
+                    mismatched++;
                     continue;
                 }
 
@@ -165,12 +213,20 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
                     continue;
                 }
 
-                var date = DateOnly.ParseExact(
-                    fields[timePeriodIndex].Trim(),
-                    "yyyy-MM-dd",
-                    CultureInfo.InvariantCulture);
+                if (!DateOnly.TryParseExact(fields[timePeriodIndex].Trim(), "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ||
+                    !decimal.TryParse(obsValueStr, NumberStyles.Number, CultureInfo.InvariantCulture, out var percentRate))
+                {
+                    malformed++;
+                    continue;
+                }
 
-                var rate = decimal.Parse(obsValueStr, CultureInfo.InvariantCulture) / 100m;
+                var rate = percentRate / 100m;
+
+                if (date < request.Range.From || date > request.Range.To)
+                {
+                    continue;
+                }
 
                 observations.Add(new ScalarObservation(date, rate, "decimal-rate"));
             }
@@ -180,7 +236,7 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
                 observations.Count);
 
             var issues = new List<DataIssue>();
-            if (observations.Count == 0)
+            if (observations.Count == 0 && CoverageComputation.CountExpectedPoints(_calendar, request.Range, request.Frequency) > 0)
             {
                 issues.Add(new DataIssue(new IssueCode("NO_DATA"), IssueSeverity.Error,
                     "ECB returned 0 usable ESTR observations."));
@@ -190,8 +246,21 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
                 issues.Add(new DataIssue(new IssueCode("MISSING_VALUES"), IssueSeverity.Warning,
                     string.Format(
                         CultureInfo.InvariantCulture,
-                        "Skipped {0} row(s) with missing OBS_VALUE in ECB ESTR response.",
+                        "Skipped {0} incomplete row(s) in ECB ESTR response.",
                         skipped)));
+            }
+
+            if (malformed > 0)
+            {
+                issues.Add(new DataIssue(new IssueCode("MALFORMED_ROW"), IssueSeverity.Warning,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "Skipped {0} malformed row(s) in ECB ESTR response.", malformed)));
+            }
+            if (mismatched > 0)
+            {
+                issues.Add(new DataIssue(new IssueCode("SERIES_MISMATCH"), IssueSeverity.Warning,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "Skipped {0} row(s) for a different ECB series.", mismatched)));
             }
 
             var returnedDates = observations.Select(o => o.Date).ToHashSet();
@@ -215,11 +284,15 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
                 Issues: issues,
                 Provenance: [provenance]);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch ESTR fixings from ECB");
 
-            return BuildErrorEnvelope("FETCH_FAILED", $"Failed to fetch ESTR fixings from ECB: {ex.Message}");
+            return BuildErrorEnvelope("FETCH_FAILED", "Failed to fetch ESTR fixings from ECB.");
         }
     }
 
@@ -239,4 +312,116 @@ public sealed class EcbEstrAdapter : IDataSourceAdapter<OvernightFixingRequest, 
             Issues: [errorIssue],
             Provenance: []);
     }
+
+    private static string[] SplitCsvRecords(string csv)
+    {
+        var records = new List<string>();
+        var record = new StringBuilder();
+        var quoted = false;
+        for (var i = 0; i < csv.Length; i++)
+        {
+            var current = csv[i];
+            if (current == '"')
+            {
+                record.Append(current);
+                if (quoted && i + 1 < csv.Length && csv[i + 1] == '"')
+                {
+                    record.Append(csv[++i]);
+                    continue;
+                }
+                quoted = !quoted;
+            }
+            else if ((current == '\n' || current == '\r') && !quoted)
+            {
+                if (record.Length > 0)
+                {
+                    records.Add(record.ToString());
+                    record.Clear();
+                }
+            }
+            else
+            {
+                record.Append(current);
+            }
+        }
+        if (record.Length > 0)
+        {
+            records.Add(record.ToString());
+        }
+        return [.. records];
+    }
+
+    private static bool TryParseCsvLine(string line, out string[] columns)
+    {
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var quoted = false;
+        var afterQuote = false;
+
+        for (var i = 0; i < line.Length; i++)
+        {
+            var current = line[i];
+            if (quoted)
+            {
+                if (current == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    field.Append('"');
+                    i++;
+                }
+                else if (current == '"')
+                {
+                    quoted = false;
+                    afterQuote = true;
+                }
+                else
+                {
+                    field.Append(current);
+                }
+            }
+            else if (afterQuote)
+            {
+                if (current == ',')
+                {
+                    fields.Add(field.ToString().Trim());
+                    field.Clear();
+                    afterQuote = false;
+                }
+                else if (!char.IsWhiteSpace(current))
+                {
+                    columns = [];
+                    return false;
+                }
+            }
+            else if (current == ',')
+            {
+                fields.Add(field.ToString().Trim());
+                field.Clear();
+            }
+            else if (current == '"' && field.ToString().All(char.IsWhiteSpace))
+            {
+                field.Clear();
+                quoted = true;
+            }
+            else if (current == '"')
+            {
+                columns = [];
+                return false;
+            }
+            else
+            {
+                field.Append(current);
+            }
+        }
+
+        if (quoted)
+        {
+            columns = [];
+            return false;
+        }
+
+        fields.Add(field.ToString().Trim());
+        columns = [.. fields];
+        return true;
+    }
+
 }

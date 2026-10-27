@@ -1,7 +1,7 @@
 #nullable enable
 Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter
 Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.EconomicSeriesRequest! request) -> bool
-Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.EconomicSeriesRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation!>!>!>!
+Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.EconomicSeriesRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.ScalarObservation>!>!>!
 Boutquin.MarketData.Adapter.Fred.FredEconomicSeriesAdapter.Priority.get -> int
 Boutquin.MarketData.Adapter.Fred.FredOptions
 Boutquin.MarketData.Adapter.Fred.FredOptions.ApiKey.get -> string!

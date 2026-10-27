@@ -18,7 +18,7 @@ using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.Requests;
-using Boutquin.MarketData.Calendars.Holidays;
+using Boutquin.MarketData.Adapter.Shared;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,7 +31,8 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the Tiingo daily price bar adapter and configures <see cref="TiingoOptions"/>.
+    /// Registers the Tiingo daily price bar, instrument metadata, and cash-dividend adapters,
+    /// and configures <see cref="TiingoOptions"/>.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configure">A delegate to configure <see cref="TiingoOptions"/>.</param>
@@ -47,11 +48,13 @@ public static class ServiceCollectionExtensions
         Action<TiingoOptions> configure)
     {
         services.Configure(configure);
-        services.TryAddKeyedSingleton<IBusinessCalendar>("tiingo", (_, _) => HolidayCalendarFactory.Create("USNY"));
+        services.TryAddKeyedSingleton<IBusinessCalendar>("tiingo", (_, _) => AdapterCalendarFactory.Create("USNY"));
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDataSourceAdapter<PriceHistoryRequest, Bar>, TiingoPriceBarAdapter>());
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDataSourceAdapter<InstrumentMetadataRequest, InstrumentMetadata>, TiingoInstrumentMetadataAdapter>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IDataSourceAdapter<DividendHistoryRequest, DividendPayment>, TiingoDividendHistoryAdapter>());
         return services;
     }
 }

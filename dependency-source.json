@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "packages": [],
+  "publishedPackages": [
+    {
+      "id": "Boutquin.MarketData.Abstractions",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Abstractions.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "cdae95aa6e9b5c0f007903cb76cc5aaf11649bbf74366a4711b97df73ab6225a",
+      "contentHash": "ZxBh7tBVziDO2zBMsgxJwFiFpQMk23SMFmV6IcPRXg+L1vuvpW4H17nQ3vZB/djtlm4nNm0Oji8gea42QjzKdw==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.abstractions/2.0.0-rc.20261027.3/boutquin.marketdata.abstractions.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Cache",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Cache.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "9e9564439436dd09574d72b277af6e4cdaff9e398680346fdaffee4371e4a859",
+      "contentHash": "I+mjVuFSpTKad78jTJ27w2/ApwZGMkx+rH5IpoCUyGKqeof6zVxcLsU/olOEfDPSNSYssl9YZeZJfaea2hi5iw==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.cache/2.0.0-rc.20261027.3/boutquin.marketdata.cache.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Calendars",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Calendars.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "6db07e5506a2d9df891d5110a19fd4bf4a66cb29ead5775d2d75ba0d6e191250",
+      "contentHash": "+/3NOxeyOB6V+wbl1U9bAVc5N9gNGbi6S02dn8+lAK8Ksj07QBjLfyOU+JM8PIFC9wb4Ae2Qy9LGGTM+i09+uA==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.calendars/2.0.0-rc.20261027.3/boutquin.marketdata.calendars.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Catalog",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Catalog.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "0e4f771c1865f3c7e69b5af7d3d6fa7fb2a340f4f6559bbd76fa3f2e0bb82557",
+      "contentHash": "X82b0OIfCZlvqUxFvUiveq8t2kWb/AeGDBWuo1fc9TBMSEJlBeDNlMH0mNrK0GwN/7fLRQYqurBcaQFF+lkBIQ==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.catalog/2.0.0-rc.20261027.3/boutquin.marketdata.catalog.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Conventions",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Conventions.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "7ab3efc86ae718e2896f3c787112d54e552babac2c3d755d6a5f4002195609eb",
+      "contentHash": "ZfFO+JVcn+1Fap3hdTZR2zFalYeZIbb5sa4+A5+8R7ZBnfC8/5eNWtwmeB69w6g7Vv5Ubmcz8Q+z5CwDXC55rg==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.conventions/2.0.0-rc.20261027.3/boutquin.marketdata.conventions.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.DayCount",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.DayCount.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "9b467185abc18b0d35e4bceada3985f00fe9e72b99c7931f33dddc87ff8b2fda",
+      "contentHash": "shd+8fydcuOYMmHjop905T2UkiQ7EeTF39XR0+X0kw8yBrfOWVD/BysE+usPgL1QCc7bQRSpDMwDyB6ZGFo96Q==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.daycount/2.0.0-rc.20261027.3/boutquin.marketdata.daycount.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.DependencyInjection",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.DependencyInjection.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "303c09e3a525183071d298f51fd9e49ecc3eaa73797391b7d7043a67ff269684",
+      "contentHash": "Md43ZKw5/QinK4PeVvo2FvQdbu6Wp7XyzEDoesRkH9LNqsGq8aa8geRTYKDXnbQhRhPZ0viwBh9xDMgGwAxT3A==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.dependencyinjection/2.0.0-rc.20261027.3/boutquin.marketdata.dependencyinjection.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Normalization",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Normalization.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "28d3fe4f28e0fe1ca1bd58f092158a9a46f706674d492f6426dc6804ad1698ce",
+      "contentHash": "ywKsmynK25Tte+cgOXzWN1cWus+JaCp6S0bk1W/FTTbcWkrp0zTd07h9gZBLAb3QKiTSq4iSXyZSqUNX1Lj8Aw==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.normalization/2.0.0-rc.20261027.3/boutquin.marketdata.normalization.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Orchestration",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Orchestration.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "7341fb5eac14af70f32d7896255e366f9d53296a0fc10b4766dab49d1511c7fd",
+      "contentHash": "9Ltw4winS4LZASL6g1RWNK+joNxYh6sLb1n8hsVT5Y8yXcSdjC2zK21Zb6isi2jd0/5LLM+SrGFxcjzxYkGaaQ==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.orchestration/2.0.0-rc.20261027.3/boutquin.marketdata.orchestration.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Storage",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Storage.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "9ccd282d8b3281b99e3509d022f33d518dad5c4357e5d4f7b6a9cae1fec61a87",
+      "contentHash": "Rp9w204keCpQA7OnU88uDhy/7uOeLng9YFRfgywJO5Hhqz/awRUEVK5PxhyNMxhv7g0RF7RwQFZ10j1jMx99tg==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.storage/2.0.0-rc.20261027.3/boutquin.marketdata.storage.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Testing",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Testing.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "248b3ac82903e9d1fddaf3717813d89a30598c0f41e126a3b0dd7f04507e758e",
+      "contentHash": "3eEzG8rVuGWAkO2pdfCTzarRaVfPpPyPcxzRigIME/+kYPz6Ear6WM2b4eaKVPJJzdEseUnv4k0Dn/mxVZbVbw==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.testing/2.0.0-rc.20261027.3/boutquin.marketdata.testing.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.MarketData.Transport",
+      "version": "2.0.0-rc.20261027.3",
+      "file": "Boutquin.MarketData.Transport.2.0.0-rc.20261027.3.nupkg",
+      "sha256": "28413d9d67b210769a95774f0e86659608d7ad94d3899637e96a5011b94cfcc9",
+      "contentHash": "NqJ1vmvTbwjI9gwDDcdpZsWJrsW9byk6qp6t3+hjQJIMxgJJwXUCOL2aeqdeRXSt1WgOiEHR709THjqvuBPi4A==",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.MarketData",
+      "sourceCommit": "24f23c963adaa72d5858638e764df10e17751de1",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.marketdata.transport/2.0.0-rc.20261027.3/boutquin.marketdata.transport.2.0.0-rc.20261027.3.nupkg"
+    },
+    {
+      "id": "Boutquin.Storage.Domain",
+      "version": "2.0.0",
+      "file": "Boutquin.Storage.Domain.2.0.0.nupkg",
+      "sha256": "6238b34ee345cc179d07b7d4872776a8daa2f583d916edd2ea4d0bf7469f1f70",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.Storage",
+      "sourceCommit": "b64aaff6426babca4bbc588da877a6008154b873",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.storage.domain/2.0.0/boutquin.storage.domain.2.0.0.nupkg",
+      "contentHash": "fwZk9FtOuQpTT/MSuOFgJSHK9mTvMA/Z33TM4BvyPyMx0fcAzZv/rEHGMyoeW1mUqHX8ftpx+edRZcix3g7pOw=="
+    },
+    {
+      "id": "Boutquin.Storage.Infrastructure",
+      "version": "2.0.0",
+      "file": "Boutquin.Storage.Infrastructure.2.0.0.nupkg",
+      "sha256": "718b58eb040fec8b26a9e80c765052b8a26c0636d30afae408a0c421774a334c",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.Storage",
+      "sourceCommit": "b64aaff6426babca4bbc588da877a6008154b873",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.storage.infrastructure/2.0.0/boutquin.storage.infrastructure.2.0.0.nupkg",
+      "contentHash": "hse+IHLQ3Cz/zzV1S+Addd/s48Atf3FkmfUKVQoEK3Ac+rl3yr6RqD3gKqkAvMk1ynZTyyjBgrDKLrhgE0iMHA=="
+    },
+    {
+      "id": "Boutquin.Storage.SourceGenerator",
+      "version": "2.0.0",
+      "file": "Boutquin.Storage.SourceGenerator.2.0.0.nupkg",
+      "sha256": "9d381a558c000ba50221b1a3695e0a14da608ff5ead3a8d32a791dafd88b8cf9",
+      "sourceRepository": "https://github.com/boutquin/Boutquin.Storage",
+      "sourceCommit": "b64aaff6426babca4bbc588da877a6008154b873",
+      "packageSource": "https://api.nuget.org/v3/index.json",
+      "downloadUrl": "https://api.nuget.org/v3-flatcontainer/boutquin.storage.sourcegenerator/2.0.0/boutquin.storage.sourcegenerator.2.0.0.nupkg",
+      "contentHash": "RB0JI3kw/vJa/yrojpbdw9l1z8asc+PzgIE1wA90bh0JCFfs342NPK2Vj1XG6f5T/uuLfhnGN3kz7EMTq1h1bQ=="
+    }
+  ]
+}

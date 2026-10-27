@@ -57,15 +57,15 @@ public sealed class BankOfCanadaCorraGoldenDataTests
         result.Payload.Should().HaveCount(3);
 
         result.Payload[0].Date.Should().Be(new DateOnly(2024, 1, 2));
-        result.Payload[0].Value.Should().Be(0.0495m);
+        result.Payload[0].Value.Should().Be(0.0505m);
         result.Payload[0].Units.Should().Be("decimal-rate");
 
         result.Payload[1].Date.Should().Be(new DateOnly(2024, 1, 3));
-        result.Payload[1].Value.Should().Be(0.0496m);
+        result.Payload[1].Value.Should().Be(0.0505m);
         result.Payload[1].Units.Should().Be("decimal-rate");
 
         result.Payload[2].Date.Should().Be(new DateOnly(2024, 1, 4));
-        result.Payload[2].Value.Should().Be(0.0495m);
+        result.Payload[2].Value.Should().Be(0.0504m);
         result.Payload[2].Units.Should().Be("decimal-rate");
     }
 }

@@ -7,3 +7,9 @@ Boutquin.MarketData.Adapter.Tiingo.TiingoInstrumentMetadataAdapter.FetchAsync(Bo
 Boutquin.MarketData.Adapter.Tiingo.TiingoInstrumentMetadataAdapter.Priority.get -> int
 Boutquin.MarketData.Adapter.Tiingo.TiingoInstrumentMetadataAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode
 Boutquin.MarketData.Adapter.Tiingo.TiingoPriceBarAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter.TiingoDividendHistoryAdapter(Boutquin.MarketData.Transport.Http.IHttpDataTransport! transport, Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Tiingo.TiingoOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter.CanHandle(Boutquin.MarketData.Abstractions.Requests.DividendHistoryRequest! request) -> bool
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter.FetchAsync(Boutquin.MarketData.Abstractions.Requests.DividendHistoryRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Boutquin.MarketData.Abstractions.Results.DataEnvelope<System.Collections.Generic.IReadOnlyList<Boutquin.MarketData.Abstractions.Records.DividendPayment>!>!>!
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter.Priority.get -> int
+Boutquin.MarketData.Adapter.Tiingo.TiingoDividendHistoryAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

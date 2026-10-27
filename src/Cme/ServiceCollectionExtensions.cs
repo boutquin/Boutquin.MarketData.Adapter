@@ -18,7 +18,7 @@ using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.Requests;
-using Boutquin.MarketData.Calendars.Holidays;
+using Boutquin.MarketData.Adapter.Shared;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
         Action<CmeOptions> configure)
     {
         services.Configure(configure);
-        services.TryAddKeyedSingleton<IBusinessCalendar>("cme-eod", (_, _) => HolidayCalendarFactory.Create("XCME"));
+        services.TryAddKeyedSingleton<IBusinessCalendar>("cme-eod", (_, _) => AdapterCalendarFactory.Create("XCME"));
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDataSourceAdapter<FuturesSettlementRequest, FuturesSettlement>, CmeSettlementAdapter>());
         return services;

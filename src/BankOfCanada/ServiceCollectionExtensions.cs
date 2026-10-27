@@ -18,9 +18,7 @@ using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.Requests;
-using Boutquin.MarketData.Calendars.Holidays;
-using Boutquin.MarketData.Abstractions.ReferenceData;
-
+using Boutquin.MarketData.Adapter.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -47,13 +45,13 @@ public static class ServiceCollectionExtensions
             services.Configure(configure);
         }
 
-        services.AddKeyedSingleton<IBusinessCalendar>(
+        services.TryAddKeyedSingleton<IBusinessCalendar>(
             "bankofcanada",
-            (_, _) => HolidayCalendarFactory.Create("CATO"));
+            (_, _) => AdapterCalendarFactory.Create("CAST"));
 
-        services.AddKeyedSingleton<IBusinessCalendar>(
+        services.TryAddKeyedSingleton<IBusinessCalendar>(
             "boc-corra",
-            (_, _) => HolidayCalendarFactory.Create("CATO"));
+            (_, _) => AdapterCalendarFactory.Create("CAST"));
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IDataSourceAdapter<YieldCurveQuoteRequest, YieldCurveQuote>, BankOfCanadaYieldCurveAdapter>());

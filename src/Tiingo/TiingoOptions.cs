@@ -28,7 +28,7 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 public sealed class TiingoOptions
 {
     /// <summary>
-    /// Base URL for the Tiingo REST API.
+    /// Absolute HTTPS base URL for the Tiingo REST API. Fetches reject other schemes before sending credentials.
     /// </summary>
     public string BaseUrl { get; set; } = "https://api.tiingo.com";
 
@@ -36,4 +36,13 @@ public sealed class TiingoOptions
     /// API authentication token issued by Tiingo.
     /// </summary>
     public string ApiToken { get; set; } = string.Empty;
+
+    internal void ValidateEndpoint()
+    {
+        if (!Uri.TryCreate(BaseUrl, UriKind.Absolute, out var endpoint) || endpoint.Scheme != Uri.UriSchemeHttps
+            || !string.IsNullOrEmpty(endpoint.UserInfo) || !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment))
+        {
+            throw new ArgumentException("Tiingo BaseUrl must be a clean absolute HTTPS endpoint without userinfo, query, or fragment because requests carry an API token.", nameof(BaseUrl));
+        }
+    }
 }

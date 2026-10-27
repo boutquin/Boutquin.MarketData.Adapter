@@ -28,6 +28,8 @@ public sealed class CmeOptions
 
     /// <summary>
     /// Glob pattern for matching settlement files within <see cref="SettlementDirectory"/>.
+    /// Each selected file must be named <c>yyyyMMdd-PRODUCT.csv</c>, where the date is the
+    /// settlement business date and PRODUCT matches the requested product code.
     /// </summary>
     public string FilePattern { get; set; } = "*.csv";
 }

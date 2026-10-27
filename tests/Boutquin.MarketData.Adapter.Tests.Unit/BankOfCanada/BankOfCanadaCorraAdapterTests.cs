@@ -15,12 +15,15 @@
 //
 
 using Boutquin.MarketData.Abstractions.Calendars;
+using Boutquin.MarketData.Abstractions.Diagnostics;
+using Boutquin.MarketData.Abstractions.Provenance;
+using Boutquin.MarketData.Abstractions.ReferenceData;
 using Boutquin.MarketData.Abstractions.Requests;
+using Boutquin.MarketData.Abstractions.Results;
 using Boutquin.MarketData.Adapter.BankOfCanada;
 using Boutquin.MarketData.Adapter.Tests.Shared;
 using Boutquin.MarketData.Calendars;
-using Boutquin.MarketData.Abstractions.Provenance;
-using Boutquin.MarketData.Abstractions.ReferenceData;
+using Boutquin.MarketData.Calendars.Holidays;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -76,7 +79,7 @@ public sealed class BankOfCanadaCorraAdapterTests
     public async Task FetchAsync_parses_json_into_scalar_observations()
     {
         var json = """
-            {"observations":[{"d":"2024-01-02","CORRA_GRAPH.CORRA":{"v":"4.95"}},{"d":"2024-01-03","CORRA_GRAPH.CORRA":{"v":"4.96"}}]}
+            {"observations":[{"d":"2024-01-02","AVG.INTWO":{"v":"4.95"}},{"d":"2024-01-03","AVG.INTWO":{"v":"4.96"}}]}
             """;
 
         var transport = new FakeHttpDataTransport();
@@ -93,9 +96,49 @@ public sealed class BankOfCanadaCorraAdapterTests
     }
 
     [Fact]
+    public async Task FetchAsync_ignores_other_numeric_series_before_corra()
+    {
+        const string json = """{"observations":[{"d":"2024-01-02","OTHER":{"v":"9.99"},"AVG.INTWO":{"v":"4.95"}}]}""";
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("bankofcanada", json);
+
+        var result = await CreateAdapter(transport).FetchAsync(
+            new OvernightFixingRequest(new BenchmarkName("CORRA"), MakeRange()), CancellationToken.None);
+
+        result.Payload.Should().ContainSingle().Which.Value.Should().Be(0.0495m);
+    }
+
+    [Fact]
+    public async Task FetchAsync_propagates_caller_cancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var transport = new FakeHttpDataTransport();
+        transport.ThrowOnNext(new OperationCanceledException(cancellation.Token));
+
+        Func<Task> act = () => CreateAdapter(transport).FetchAsync(
+            new OvernightFixingRequest(new BenchmarkName("CORRA"), MakeRange()), cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task FetchAsync_does_not_expose_transport_exception_detail()
+    {
+        var transport = new FakeHttpDataTransport();
+        transport.ThrowOnNext(new HttpRequestException("credential file /private/api-key.txt failed"));
+
+        var result = await CreateAdapter(transport).FetchAsync(
+            new OvernightFixingRequest(new BenchmarkName("CORRA"), MakeRange()), CancellationToken.None);
+
+        result.Issues.Should().ContainSingle(i => i.Code == new IssueCode("FETCH_FAILED"))
+            .Which.Message.Should().NotContain("/private/api-key.txt");
+    }
+
+    [Fact]
     public async Task FetchAsync_populates_provenance()
     {
-        var json = """{"observations":[{"d":"2024-01-02","CORRA_GRAPH.CORRA":{"v":"4.95"}}]}""";
+        var json = """{"observations":[{"d":"2024-01-02","AVG.INTWO":{"v":"4.95"}}]}""";
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("bankofcanada", json);
         var adapter = CreateAdapter(transport);
@@ -104,5 +147,105 @@ public sealed class BankOfCanadaCorraAdapterTests
 
         result.Provenance.Should().ContainSingle();
         result.Provenance[0].Provider.Should().Be(new ProviderCode("boc-corra"));
+    }
+
+    // ---------- Calendar-aware coverage (feature-calendar-aware-coverage) ----------
+
+    [Fact]
+    public async Task FetchAsync_business_day_range_reports_complete_coverage()
+    {
+        var json = """
+            {"observations":[
+              {"d":"2024-01-08","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-09","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-10","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-11","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-12","AVG.INTWO":{"v":"4.95"}}]}
+            """;
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("bankofcanada", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new OvernightFixingRequest(
+            new BenchmarkName("CORRA"),
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(5);
+        result.Coverage.ReturnedPoints.Should().Be(5);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_weekend_only_range_reports_no_unexpected_gaps()
+    {
+        var json = """{"observations":[]}""";
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("bankofcanada", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new OvernightFixingRequest(
+            new BenchmarkName("CORRA"),
+            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(0);
+        result.Coverage.CoverageRatio.Should().Be(1.0m);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_holiday_within_range_is_not_flagged_as_gap()
+    {
+        // Canada Day 2024 = Mon Jul 1 (CATO holiday).
+        var json = """
+            {"observations":[
+              {"d":"2024-07-02","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-07-03","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-07-04","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-07-05","AVG.INTWO":{"v":"4.95"}}]}
+            """;
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("bankofcanada", json);
+        var cato = HolidayCalendarFactory.Create("CATO");
+        var adapter = CreateAdapter(transport, calendar: cato);
+
+        var request = new OvernightFixingRequest(
+            new BenchmarkName("CORRA"),
+            new DateRange(new DateOnly(2024, 7, 1), new DateOnly(2024, 7, 5)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.RequestedPoints.Should().Be(4);
+        result.Coverage.ReturnedPoints.Should().Be(4);
+        result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("UNEXPECTED_GAP"));
+    }
+
+    [Fact]
+    public async Task FetchAsync_missing_business_day_emits_unexpected_gap()
+    {
+        var json = """
+            {"observations":[
+              {"d":"2024-01-08","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-09","AVG.INTWO":{"v":"4.95"}},
+              {"d":"2024-01-10","AVG.INTWO":{"v":"4.95"}}]}
+            """;
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("bankofcanada", json);
+        var adapter = CreateAdapter(transport);
+
+        var request = new OvernightFixingRequest(
+            new BenchmarkName("CORRA"),
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+
+        var result = await adapter.FetchAsync(request, CancellationToken.None);
+
+        result.Coverage.Status.Should().Be(CompletenessStatus.Partial);
+        var gaps = result.Issues.Where(i => i.Code == new IssueCode("UNEXPECTED_GAP")).ToList();
+        gaps.Should().HaveCount(2);
     }
 }
