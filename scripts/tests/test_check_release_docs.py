@@ -53,6 +53,10 @@ class ReleaseDocsTests(unittest.TestCase):
         errors = self.errors(doc='The stable README links target the future `v2.0.1` snapshot.')
         self.assertTrue(any('stale release wording' in e for e in errors))
 
+    def test_rejects_stale_unreleased_cross_reference(self):
+        errors = self.errors(changelog=GOOD_CHANGELOG + '- Old note (superseded in Unreleased by a later change).\n')
+        self.assertTrue(any('still refers to an unreleased state' in e for e in errors))
+
     def test_rejects_non_stable_version(self):
         self.assertEqual(2, check.main(['2.0.0-rc.1']))
 

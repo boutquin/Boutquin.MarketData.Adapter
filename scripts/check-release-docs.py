@@ -39,6 +39,10 @@ def check(root, version):
     elif heading is not None and changelog[unreleased.end():heading.start()].strip():
         errors.append('CHANGELOG.md `[Unreleased]` is not empty: move its entries into the release section')
 
+    for number, line in enumerate(changelog.splitlines(), 1):
+        if re.search('unreleased', line, re.I) and line.strip() != '## [Unreleased]':
+            errors.append(f'CHANGELOG.md:{number} still refers to an unreleased state: {line.strip()[:80]}')
+
     readme = (root / 'README.md').read_text(encoding='utf-8')
     if f'--version {version}' not in readme:
         errors.append(f'README.md does not install --version {version}')
