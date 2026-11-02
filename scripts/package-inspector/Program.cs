@@ -10,7 +10,7 @@ if (args[0] == "--assembly-only")
 {
     var identityAssembly = AssemblyName.GetAssemblyName(args[1]);
     var identityFile = FileVersionInfo.GetVersionInfo(args[1]);
-    if (identityAssembly.Version?.ToString() != "2.0.0.0" || identityFile.FileVersion != "2.0.0.0"
+    if (identityAssembly.Version?.ToString() != "2.0.0.0" || identityFile.FileVersion != args[2].Split('-')[0] + ".0"
         || identityFile.ProductVersion != args[2] + "+" + args[3])
     {
         throw new InvalidOperationException($"Wrong dependency identity: {identityAssembly.Version}/{identityFile.FileVersion}/{identityFile.ProductVersion}");
@@ -29,7 +29,7 @@ var assembly = AssemblyName.GetAssemblyName(args[0]);
 var file = FileVersionInfo.GetVersionInfo(args[0]);
 var version = args[2];
 var commit = args[3];
-if (assembly.Version?.ToString() != "2.0.0.0" || file.FileVersion != "2.0.0.0"
+if (assembly.Version?.ToString() != "2.0.0.0" || file.FileVersion != version.Split('-')[0] + ".0"
     || file.ProductVersion != version + "+" + commit)
 {
     throw new InvalidOperationException($"Wrong identity: {assembly.Version}/{file.FileVersion}/{file.ProductVersion}");

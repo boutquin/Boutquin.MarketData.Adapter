@@ -215,20 +215,43 @@ public sealed class TiingoPriceBarAdapterTests
             .Which.AbsolutePath.Should().Be($"/tiingo/daily/{ticker}/prices");
     }
 
-    [Fact]
-    public async Task FetchAsync_defaults_adjClose_to_close_when_null()
+    [Theory]
+    [InlineData(",\"adjClose\":null")]
+    [InlineData("")]
+    [InlineData(",\"adjClose\":0")]
+    [InlineData(",\"adjClose\":\"100.5\"")]
+    public async Task FetchAsync_fails_closed_when_a_row_has_no_usable_adjClose(string adjCloseField)
     {
-        var json = """
-            [{"date":"2024-01-02T00:00:00+00:00","open":100.0,"high":101.0,"low":99.0,"close":100.5,"adjClose":null,"volume":1000}]
+        // The adjusted close is the total-return field. Filling it from the raw close would label price
+        // return as total return, so the symbol yields an issue naming the date and no bars.
+        var json = $$"""
+            [{"date":"2024-01-02T00:00:00+00:00","open":100.0,"high":101.0,"low":99.0,"close":100.5,"adjClose":100.2,"volume":1000},
+             {"date":"2024-01-03T00:00:00+00:00","open":100.0,"high":101.0,"low":99.0,"close":100.5{{adjCloseField}},"volume":1000}]
             """;
 
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("tiingo/daily/AAPL", json);
-        var adapter = CreateAdapter(transport);
+        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        result.Payload.Should().BeEmpty();
+        result.Issues.Should().ContainSingle(i => i.Code == new IssueCode("FETCH_FAILED")).Which.Message
+            .Should().Contain("AAPL").And.Contain("2024-01-03");
+    }
 
-        result.Payload[0].AdjustedClose.Should().Be(100.5m);
+    [Fact]
+    public async Task FetchAsync_keeps_a_present_adjClose_distinct_from_the_raw_close()
+    {
+        var json = """
+            [{"date":"2024-01-02T00:00:00+00:00","open":100.0,"high":101.0,"low":99.0,"close":100.5,"adjClose":98.25,"volume":1000}]
+            """;
+
+        var transport = new FakeHttpDataTransport();
+        transport.RespondTo("tiingo/daily/AAPL", json);
+        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+
+        result.Issues.Should().NotContain(i => i.Code == new IssueCode("FETCH_FAILED"));
+        result.Payload.Should().ContainSingle().Which.Should().Match<Bar>(
+            b => b.Close == 100.5m && b.AdjustedClose == 98.25m);
     }
 
     [Fact]

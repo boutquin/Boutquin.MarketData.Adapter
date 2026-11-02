@@ -41,8 +41,9 @@ public sealed class TwelveDataPriceBarAdapterTests
         TwelveDataOptions? options = null,
         IBusinessCalendar? calendar = null)
     {
+        // Price-focused tests answer /dividends with an empty list; dividend behaviour has its own tests.
         return new TwelveDataPriceBarAdapter(
-            transport,
+            new TwelveDataFundamentalsStubTransport(transport),
             rawStore ?? new FakeRawDocumentStore(),
             s_clock,
             calendar ?? new WeekendOnlyCalendar("TEST"),
@@ -140,7 +141,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         result.Payload[0].High.Should().Be(197.30m);
         result.Payload[0].Low.Should().Be(195.40m);
         result.Payload[0].Close.Should().Be(197.20m);
-        // AdjustedClose = Close for Twelve Data
+        // No dividends in the window and the bar is the anchor, so AdjustedClose == Close.
         result.Payload[0].AdjustedClose.Should().Be(197.20m);
         result.Payload[0].Volume.Should().Be(52000000);
     }
@@ -184,8 +185,10 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("X")], MakeRange()), CancellationToken.None);
 
-        result.Provenance.Should().ContainSingle();
-        result.Provenance[0].Provider.Should().Be(new ProviderCode("twelvedata"));
+        // One price page and one dividends request.
+        result.Provenance.Should().HaveCount(2).And.OnlyContain(p => p.Provider == new ProviderCode("twelvedata"));
+        result.Provenance.Should().ContainSingle(p => p.SourceUrl!.Contains("/time_series"));
+        result.Provenance.Should().ContainSingle(p => p.SourceUrl!.Contains("/dividends"));
     }
 
     [Fact]
@@ -197,7 +200,7 @@ public sealed class TwelveDataPriceBarAdapterTests
             new PriceHistoryRequest([new Symbol("XIC")], MakeRange()), CancellationToken.None);
 
         transport.RequestedUris[0].Query.Should().Contain("apikey=test-key");
-        result.Provenance.Should().ContainSingle().Which.SourceUrl.Should().NotContain("test-key");
+        result.Provenance.Should().NotBeEmpty().And.OnlyContain(p => !p.SourceUrl!.Contains("test-key"));
     }
 
     [Fact]
@@ -210,7 +213,8 @@ public sealed class TwelveDataPriceBarAdapterTests
         await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.XTSE });
         await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.NEOE });
 
-        rawStore.SavedKeys.Should().HaveCount(2).And.OnlyHaveUniqueItems();
+        // One price page and one dividends payload per venue.
+        rawStore.SavedKeys.Should().HaveCount(4).And.OnlyHaveUniqueItems();
     }
 
     [Fact]

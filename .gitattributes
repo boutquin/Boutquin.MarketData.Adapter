@@ -30,3 +30,8 @@ review-accepted.yaml export-ignore
 
 # This replay driver consumes preserved private review inventories.
 scripts/replay-robustness-controls.py export-ignore
+
+# Private prepublication verification is not part of the public source export.
+.github/workflows/qualify-stable-private.yml export-ignore
+
+.github/workflows/qualify-patch-private.yml export-ignore

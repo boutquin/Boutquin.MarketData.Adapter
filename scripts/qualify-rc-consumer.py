@@ -86,7 +86,7 @@ def verify_restore(consumer, cache, feed, dependencies, inspection, published=Fa
     locked = json.loads((ROOT / 'dependency-source.json').read_text())
     expected = {item['id']: (item['version'], dependencies / locked.get('packageDirectory', 'nuget') / item['file']) for item in locked['packages']}
     expected.update({item['id']: (inspection['version'], feed / f"{item['id']}.{inspection['version']}.nupkg") for item in inspection['packages']})
-    public = {item['id']: item for item in locked.get('publishedPackages', [])}
+    public = {item['id']: item for item in locked.get('publishedPackages', []) + locked.get('preparedPackages', [])}
     public_check = runpy.run_path(str(ROOT / 'scripts/check-runner-dependencies.py'))['verify_cached_package']
     resolved = set()
     for project in (consumer / 'tests').rglob('*.csproj'):
@@ -97,7 +97,8 @@ def verify_restore(consumer, cache, feed, dependencies, inspection, published=Fa
             if name.startswith(('Boutquin.MarketData.', 'Boutquin.Storage.')):
                 if name in public:
                     require(version == public[name]['version'], 'Wrong published package version')
-                    public_check(public[name], cache, public[name]['packageSource'])
+                    expected_source = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py'))['source'](public[name]) if 'payloadSha256' in public[name] else public[name]['packageSource']
+                    public_check(public[name], cache, expected_source)
                     resolved.add(name)
                     continue
                 require(name in expected, f'Unpinned private package {identity}')
@@ -165,7 +166,7 @@ public sealed class FrozenAdapterIdentityTests
         {
             var assembly = Assembly.Load(package.GetProperty("id").GetString()!);
             Assert.Equal("2.0.0.0", assembly.GetName().Version!.ToString());
-            Assert.Equal("2.0.0.0", System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion);
+            Assert.Equal(root.GetProperty("version").GetString()!.Split('-')[0] + ".0", System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion);
             Assert.Equal(expected, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion);
             Assert.Equal(package.GetProperty("dllSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))).ToLowerInvariant());
             count++;
@@ -192,6 +193,14 @@ public sealed class FrozenAdapterIdentityTests
     cache.mkdir(); http.mkdir()
     env.update(NUGET_PACKAGES=str(cache), NUGET_HTTP_CACHE_PATH=str(http))
     run(['python3', str(ROOT / 'scripts/check-runner-dependencies.py')], ROOT, output / 'dependency-bytes.log', env)
+    prepared = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py'))
+    if prepared['candidate_feed']() is not None:
+        configuration = ET.parse(consumer / 'nuget.config')
+        ET.SubElement(configuration.find('packageSources'), 'add', key='prepared', value=str(prepared['candidate_feed']()))
+        mapping = ET.SubElement(configuration.find('packageSourceMapping'), 'packageSource', key='prepared')
+        for item in json.loads((ROOT / 'dependency-source.json').read_text()).get('preparedPackages', []):
+            ET.SubElement(mapping, 'package', pattern=item['id'])
+        configuration.write(consumer / 'nuget.config', encoding='unicode')
     run(['dotnet', 'restore', SOLUTION, '--configfile', 'nuget.config', '--no-http-cache', '-p:RestorePackagesWithLockFile=true', '-p:_WorkloadLibraryPacksFolder=' + str(work / 'absent-sdk-feed')], consumer, output / 'restore.log', env)
     resolved = verify_restore(consumer, cache, feed, dependencies, inspection, args.published)
     run(['dotnet', 'restore', SOLUTION, '--configfile', 'nuget.config', '--no-http-cache', '--locked-mode', '-p:_WorkloadLibraryPacksFolder=' + str(work / 'absent-sdk-feed')], consumer, output / 'locked-restore.log', env)

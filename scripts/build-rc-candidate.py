@@ -19,10 +19,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', required=True)
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--version', required=True, help='Fresh, never previously built 2.0.0-rc version')
+    parser.add_argument('--version', required=True, help='Never previously accepted 2.0.0/2.0.1 stable or numeric RC version')
     args = parser.parse_args()
-    if not re.fullmatch(r'2\.0\.0-rc\.[0-9]+(?:\.[0-9]+)*', args.version):
-        parser.error('Expected numeric 2.0.0-rc identity')
+    if not re.fullmatch(r'2\.0\.[01](?:-rc\.[0-9]+(?:\.[0-9]+)*)?', args.version):
+        parser.error('Expected exact 2.0.0/2.0.1 or matching numeric RC identity')
     if not re.fullmatch('[0-9a-f]{40}', args.source):
         parser.error('source must be a full committed SHA')
     output = args.output.resolve()
@@ -49,8 +49,12 @@ def main():
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=source).strip():
         raise SystemExit('Candidate source clone is not clean')
     run(['python3', 'scripts/check-runner-dependencies.py'], source)
+    config = 'nuget.ci.config'
+    if os.environ.get('BOUTQUIN_PREPARED_FEED'):
+        config = str(output / 'prepared.nuget.config')
+        run(['python3', 'scripts/prepared-dependencies.py', '--config', config], source)
     solution = 'Boutquin.MarketData.Adapter.slnx'
-    run(['dotnet', 'restore', solution, '--configfile', 'nuget.ci.config', '--no-http-cache', '--locked-mode', '-p:_WorkloadLibraryPacksFolder=' + str(output / 'absent-sdk-feed')], source)
+    run(['dotnet', 'restore', solution, '--configfile', config, '--no-http-cache', '--locked-mode', '-p:_WorkloadLibraryPacksFolder=' + str(output / 'absent-sdk-feed')], source)
     run(['python3', 'scripts/check-runner-dependencies.py', '--packages', str(cache)], source)
     run(['dotnet', 'build', solution, '-c', 'Release', '--no-restore', '--no-incremental', '--disable-build-servers', '-m:1', '-p:UseSharedCompilation=false', '-p:GeneratePackageOnBuild=false', '-p:MinVerVersionOverride=' + version], source)
     run(['dotnet', 'test', solution, '-c', 'Release', '--no-build', '--no-restore', '--logger', 'trx', '--results-directory', str(output / 'source-trx')], source)

@@ -1,9 +1,9 @@
-# Migrating to 2.0 RC
+# Migrating to 2.0
 
-Install Adapter `2.0.0-rc.20261027.4` with MarketData `2.0.0-rc.20261027.4` on .NET 10. Published Storage 2.0.0 is resolved transitively where needed. All dependencies are available from NuGet.org.
+Install Adapter `2.0.1` with MarketData `2.0.1` on .NET 10. Published Storage 2.0.1 is resolved transitively where needed. Use the same stable version across the kernel and Adapter package families.
 
 Credential-bearing Tiingo, TwelveData and FRED base URLs must use absolute HTTPS URLs. Cancellation propagates to callers rather than becoming a partial-data result. Price adapters and Frankfurter accept one symbol/pair per direct request; use the kernel to partition batches. Shared utilities are an implementation dependency; provider adapters remain independent of one another.
 
-Read the [changelog](../CHANGELOG.md) for breaking renames and the [provider reference](adapters.md) for authentication, calendars, limits and completeness. CORRA uses `AVG.INTWO`; TwelveData close data is unadjusted; Tiingo earliest-price dates are not instrument inception dates. Default calendars are bounded to 2020–2030 and warn outside that range.
+Read the [changelog](../CHANGELOG.md) for breaking renames and the [provider reference](adapters.md) for authentication, calendars, limits and completeness. CORRA uses `AVG.INTWO`; TwelveData `Close`/`Open`/`High`/`Low` are split-adjusted prices (`adjust=splits`, raw key `twelvedata/daily-splits/`) and `AdjustedClose` is a total return computed by the adapter from Twelve Data's `/dividends` cash list (raw key `twelvedata/dividends/`), anchored to the request's last bar. Do not mix in payloads or `Bar` snapshots from earlier builds: `twelvedata/daily/` payloads are of ambiguous basis, `twelvedata/daily-all/` payloads are the provider's total-return series, which is wrong on some special-distribution dates, and earlier `daily-splits/` payloads were published with `AdjustedClose == Close` (price return). Purge every `Bar` snapshot built from any of them and refetch Canadian histories. Tiingo price rows without a usable `adjClose` now fail the fetch instead of reusing the raw close; Tiingo earliest-price dates are not instrument inception dates. Default calendars are bounded to 2020–2030 and warn outside that range.
 
 Qualification uses deterministic fixtures, independent behavioral controls, malformed-response and cancellation regressions, and cold package consumers. It does not certify live provider uptime, credentials, rate plans or licensed entitlements.

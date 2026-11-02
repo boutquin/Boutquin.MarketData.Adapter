@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import runpy
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -15,7 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def verify_archive(item, path):
     content = path.read_bytes()
-    if hashlib.sha256(content).hexdigest() != item["sha256"]:
+    if "payloadSha256" in item:
+        content = runpy.run_path(str(ROOT / "scripts/prepared-dependencies.py"))["verify"](item, path)
+    elif hashlib.sha256(content).hexdigest() != item["sha256"]:
         raise ValueError(f"Package SHA-256 mismatch: {item['id']}")
     with zipfile.ZipFile(path) as archive:
         names = [n for n in archive.namelist() if n.endswith(".nuspec")]
@@ -81,7 +84,7 @@ def verify(feed, packages=None):
     central = ET.parse(ROOT / "Directory.Packages.props")
     version = central.findtext(".//MarketDataKernelVersion")
     commit = central.findtext(".//MarketDataKernelCommit")
-    all_packages = lock["packages"] + lock.get("publishedPackages", [])
+    all_packages = lock["packages"] + lock.get("publishedPackages", []) + lock.get("preparedPackages", [])
     declared = {item["id"]: item["version"] for item in all_packages}
     if len(declared) != len(all_packages):
         raise ValueError("Duplicate dependency identities")
@@ -91,6 +94,9 @@ def verify(feed, packages=None):
             pin = item.attrib["Version"].replace("$(MarketDataKernelVersion)", version)
             if declared.get(name) != pin:
                 raise ValueError("Central kernel pin differs from qualified closure")
+    domain = central.find(".//PackageVersion[@Include='Boutquin.Domain']")
+    if domain is None or declared.get("Boutquin.Domain") != domain.get("Version"):
+        raise ValueError("Central Domain pin differs from qualified closure")
     if any(item["sourceCommit"] != commit for item in all_packages if item["id"].startswith("Boutquin.MarketData.")):
         raise ValueError("Central kernel commit differs from qualified source")
     files = {item["file"] for item in lock["packages"]}
@@ -106,7 +112,7 @@ def verify(feed, packages=None):
                     if library.get("type") == "project":
                         continue
                     name, version = identity.rsplit("/", 1)
-                    if name.startswith(("Boutquin.MarketData.", "Boutquin.Storage.")) and name not in declared:
+                    if name.startswith(("Boutquin.MarketData.", "Boutquin.Storage.", "Boutquin.Domain")) and name not in declared:
                         raise ValueError(f"Unpinned private dependency: {identity}")
                     if name in declared:
                         if version != declared[name]:
@@ -129,6 +135,12 @@ def verify(feed, packages=None):
             raise ValueError("Published Storage must use nuget.org")
         if packages is not None and item["id"] in resolved:
             verify_cached_package(item, packages, item["packageSource"])
+    prepared = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py')) if lock.get('preparedPackages') else None
+    for item in lock.get('preparedPackages', []):
+        if prepared['candidate_feed']() is not None:
+            verify_archive(item, prepared['candidate_feed']() / item['file'])
+        if packages is not None and item['id'] in resolved:
+            verify_cached_package(item, packages, prepared['source'](item))
     print(f"PASS: {len(declared)} original package identities and hashes; source {head}")
     if packages is not None:
         print(f"PASS: all {len(resolved)} referenced dependencies resolved from their verified sources")

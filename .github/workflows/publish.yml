@@ -1,10 +1,10 @@
-name: Publish qualified RC
+name: Publish qualified release
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing qualified RC tag (v2.0.0-rc.*)
+        description: Existing qualified 2.0.0/2.0.1 stable or numeric RC tag
         required: true
         type: string
       manifest_sha256:
@@ -23,23 +23,29 @@ jobs:
   publish:
     if: github.repository == 'boutquin/Boutquin.MarketData.Adapter' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Trusted publishing: the nuget.org policy for this repo/workflow/environment exchanges the
+    # job's OIDC token for a one-hour API key; no long-lived key is stored.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Validate release inputs
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
           MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
         run: |
-          [[ "$RELEASE_TAG" =~ ^v2\.0\.0-rc\.[0-9]+(\.[0-9]+)*$ ]]
+          [[ "$RELEASE_TAG" =~ ^v2\.0\.[01](-rc\.[0-9]+(\.[0-9]+)*)?$ ]]
           [[ "$MANIFEST_SHA256" =~ ^[0-9a-f]{64}$ ]]
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
       - name: Download frozen release archives
@@ -47,6 +53,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir release-assets --pattern '*.nupkg' --pattern '*.snupkg' --pattern 'package-hashes.json'
+      - name: Verify release documentation for stable tags
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ "$RELEASE_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            python3 scripts/check-release-docs.py "${BASH_REMATCH[1]}"
+          fi
       - name: Build metadata inspector only
         run: dotnet build scripts/package-inspector/PackageInspector.csproj -c Release
       - name: Verify exact qualified package bytes and public source identity
@@ -54,14 +67,19 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
           MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
         run: python3 scripts/verify-release-assets.py release-assets "$RELEASE_TAG" "$MANIFEST_SHA256"
+      - name: NuGet login (OIDC to short-lived API key)
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
       - name: Publish verified packages and symbols
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           test -n "$NUGET_API_KEY"
           dotnet nuget push "release-assets/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
           dotnet nuget push "release-assets/*.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: publication-inspection

@@ -31,8 +31,13 @@ class RunnerDependencyTests(unittest.TestCase):
         self.archive = package.read_bytes()
         (self.feed / 'manifest.json').write_text('{}')
         self.lock = dict(revision=self.commit, manifestInputs=[dict(file='manifest.json', sha256=hashlib.sha256(b'{}').hexdigest())], packages=[dict(id=self.id, version=self.version, file=package.name, sha256=hashlib.sha256(self.archive).hexdigest(), sourceCommit=self.commit, sourceRepository='repo')])
+        domain = self.feed / 'nuget/domain.nupkg'
+        with zipfile.ZipFile(domain, 'w') as archive:
+            archive.writestr('domain.nuspec', f'<package><metadata><id>Boutquin.Domain</id><version>1.0.1</version><repository url="repo" commit="{self.commit}" /></metadata></package>')
+        self.lock['packages'].append(dict(id='Boutquin.Domain', version='1.0.1', file=domain.name,
+            sha256=hashlib.sha256(domain.read_bytes()).hexdigest(), sourceCommit=self.commit, sourceRepository='repo'))
         self.save_lock()
-        (self.root / 'Directory.Packages.props').write_text(f'<Project><PropertyGroup><MarketDataKernelVersion>{self.version}</MarketDataKernelVersion><MarketDataKernelCommit>{self.commit}</MarketDataKernelCommit></PropertyGroup><ItemGroup><PackageVersion Include="{self.id}" Version="$(MarketDataKernelVersion)" /></ItemGroup></Project>')
+        (self.root / 'Directory.Packages.props').write_text(f'<Project><PropertyGroup><MarketDataKernelVersion>{self.version}</MarketDataKernelVersion><MarketDataKernelCommit>{self.commit}</MarketDataKernelCommit></PropertyGroup><ItemGroup><PackageVersion Include="{self.id}" Version="$(MarketDataKernelVersion)" /><PackageVersion Include="Boutquin.Domain" Version="1.0.1" /></ItemGroup></Project>')
         project = self.root / 'tests' / 'Test'
         (project / 'obj').mkdir(parents=True)
         (project / 'Test.csproj').write_text('<Project/>')
@@ -82,6 +87,18 @@ class RunnerDependencyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Central kernel pin'):
             CHECKER.verify(self.feed)
 
+    def test_missing_domain_pin_rejected(self):
+        p = self.root / 'Directory.Packages.props'
+        p.write_text(p.read_text().replace('<PackageVersion Include="Boutquin.Domain" Version="1.0.1" />', ''))
+        with self.assertRaisesRegex(ValueError, 'Central Domain pin'):
+            CHECKER.verify(self.feed)
+
+    def test_wrong_domain_pin_rejected(self):
+        p = self.root / 'Directory.Packages.props'
+        p.write_text(p.read_text().replace('Include="Boutquin.Domain" Version="1.0.1"', 'Include="Boutquin.Domain" Version="1.0.0"'))
+        with self.assertRaisesRegex(ValueError, 'Central Domain pin'):
+            CHECKER.verify(self.feed)
+
     def test_wrong_restore_feed_rejected(self):
         data = json.loads(self.metadata.read_text())
         data['source'] = str(self.root / 'wrong')
@@ -112,7 +129,8 @@ class RunnerDependencyTests(unittest.TestCase):
         import shutil
         alternate = self.feed / 'feeds/stable'
         alternate.mkdir(parents=True)
-        shutil.copyfile(self.feed / 'nuget/candidate.nupkg', alternate / 'candidate.nupkg')
+        for package in (self.feed / 'nuget').glob('*.nupkg'):
+            shutil.copyfile(package, alternate / package.name)
         self.lock['packageDirectory'] = 'feeds/stable'
         (self.root / 'dependency-source.json').write_text(json.dumps(self.lock))
         with self.assertRaisesRegex(ValueError, 'source'):

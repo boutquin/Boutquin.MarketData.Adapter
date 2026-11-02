@@ -72,7 +72,7 @@ public sealed class C1C3RcRobustnessTests
     {
         "tiingo" => new TiingoPriceBarAdapter(transport, new FakeRawDocumentStore(), s_clock, new WeekendOnlyCalendar("TEST"),
             Options.Create(new TiingoOptions()), NullLogger<TiingoPriceBarAdapter>.Instance),
-        "twelvedata" => new TwelveDataPriceBarAdapter(transport, new FakeRawDocumentStore(), s_clock, new WeekendOnlyCalendar("TEST"),
+        "twelvedata" => new TwelveDataPriceBarAdapter(new TwelveDataFundamentalsStubTransport(transport), new FakeRawDocumentStore(), s_clock, new WeekendOnlyCalendar("TEST"),
             Options.Create(new TwelveDataOptions()), NullLogger<TwelveDataPriceBarAdapter>.Instance),
         _ => throw new ArgumentException("Unknown test provider.", nameof(provider)),
     };
@@ -328,12 +328,42 @@ public sealed class C1C3RcRobustnessTests
     }
 
     [Fact]
-    public async Task TwelveData_explicitly_requests_unadjusted_OHLC_prices()
+    public async Task TwelveData_explicitly_requests_split_adjusted_prices()
     {
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("time_series", "{\"values\":[]}");
         await Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
-        System.Web.HttpUtility.ParseQueryString(transport.RequestedUris.Single().Query)["adjust"].Should().Be("none");
+        System.Web.HttpUtility.ParseQueryString(transport.RequestedUris.Single().Query)["adjust"].Should().Be("splits");
+    }
+
+    [Fact]
+    public async Task TwelveData_xtse_route_is_split_adjusted_with_dividends_and_keyed_by_basis()
+    {
+        var prices = new FakeHttpDataTransport();
+        prices.RespondTo("time_series", "{\"values\":[{\"datetime\":\"2024-01-09\"," + BarValues + "},{\"datetime\":\"2024-01-08\"," + BarValues + "}]}");
+        var transport = new TwelveDataFundamentalsStubTransport(prices);
+        var store = new FakeRawDocumentStore();
+        var adapter = new TwelveDataPriceBarAdapter(transport, store, s_clock, new WeekendOnlyCalendar("TEST"),
+            Options.Create(new TwelveDataOptions()), NullLogger<TwelveDataPriceBarAdapter>.Instance);
+        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], s_range) { Exchange = ExchangeCode.XTSE });
+
+        var query = System.Web.HttpUtility.ParseQueryString(prices.RequestedUris.Single().Query);
+        query["adjust"].Should().Be("splits");
+        query["mic_code"].Should().Be("XTSE");
+
+        var dividends = transport.FundamentalsUris.Should().ContainSingle().Which;
+        dividends.AbsolutePath.Should().EndWith("/dividends");
+        var dividendQuery = System.Web.HttpUtility.ParseQueryString(dividends.Query);
+        dividendQuery["symbol"].Should().Be("XIC");
+        dividendQuery["mic_code"].Should().Be("XTSE");
+        dividendQuery["start_date"].Should().Be("2024-01-08");
+        dividendQuery["end_date"].Should().Be("2024-01-09");
+        dividendQuery["adjust"].Should().Be("false");
+
+        store.SavedKeys.Should().BeEquivalentTo(
+            ["twelvedata/daily-splits/XIC/XTSE/20240108-20240109", "twelvedata/dividends/XIC/XTSE/20240108-20240109"]);
+        store.SavedKeys.Should().NotContain(k => k.StartsWith("twelvedata/daily/", StringComparison.Ordinal)
+            || k.StartsWith("twelvedata/daily-all/", StringComparison.Ordinal));
     }
 
     [Theory]

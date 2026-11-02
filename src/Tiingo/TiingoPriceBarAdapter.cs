@@ -45,6 +45,13 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 /// <see langword="false"/>.
 /// </para>
 /// <para>
+/// <b>Price basis.</b> <see cref="Bar.Open"/>, <see cref="Bar.High"/>, <see cref="Bar.Low"/> and
+/// <see cref="Bar.Close"/> are Tiingo's raw (unadjusted) prices; <see cref="Bar.AdjustedClose"/> is Tiingo's
+/// split- and dividend-adjusted <c>adjClose</c>, anchored by the provider to the present. A row whose
+/// <c>adjClose</c> is missing, null or not positive is never filled from the raw close: the symbol's fetch
+/// returns a <c>FETCH_FAILED</c> issue naming the date and no bars.
+/// </para>
+/// <para>
 /// Exactly one symbol is accepted because <see cref="Bar"/> does not carry symbol ownership.
 /// Partition batches before dispatch. Fetch failures are logged and recorded as
 /// <see cref="DataIssue"/> entries; caller cancellation propagates.
@@ -192,6 +199,13 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
             {
                 throw;
             }
+            catch (MissingAdjustedCloseException missing)
+            {
+                var day = missing.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                _logger.LogWarning("Tiingo returned no usable adjClose for {Symbol} on {Date}", symbol, day);
+                issues.Add(new DataIssue(new IssueCode("FETCH_FAILED"), IssueSeverity.Warning,
+                    $"Tiingo returned no usable adjusted close for symbol '{symbol}' on {day}; no bars were produced."));
+            }
             catch (Exception ex)
             {
                 _logger.LogWarning("Failed to fetch bars for {Symbol} from Tiingo ({ExceptionType})", symbol, ex.GetType().Name);
@@ -227,9 +241,16 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
             var low = element.GetProperty("low").GetDecimal();
             var close = element.GetProperty("close").GetDecimal();
 
-            var adjClose = element.TryGetProperty("adjClose", out var adjProp) && adjProp.ValueKind == JsonValueKind.Number
-                ? adjProp.GetDecimal()
-                : close;
+            // The adjusted close is the total-return field. A row without a positive adjClose must not be
+            // published with the raw close standing in for it, so the whole symbol fails closed.
+            if (!element.TryGetProperty("adjClose", out var adjProp)
+                || adjProp.ValueKind != JsonValueKind.Number
+                || adjProp.GetDecimal() <= 0m)
+            {
+                throw new MissingAdjustedCloseException(date);
+            }
+
+            var adjClose = adjProp.GetDecimal();
 
             var volume = element.TryGetProperty("volume", out var volProp) && volProp.ValueKind == JsonValueKind.Number
                 ? volProp.GetInt64()
@@ -245,5 +266,13 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
         }
 
         return bars;
+    }
+
+    /// <summary>Signals a price row whose <c>adjClose</c> is missing, non-numeric or not positive.</summary>
+    private sealed class MissingAdjustedCloseException : Exception
+    {
+        public MissingAdjustedCloseException(DateOnly date) : base("Tiingo returned a price row without a usable adjClose.") => Date = date;
+
+        public DateOnly Date { get; }
     }
 }

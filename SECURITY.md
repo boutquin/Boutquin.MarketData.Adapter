@@ -4,7 +4,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| 2.0 prerelease | Candidate fixes during qualification |
+| 2.0.x | Yes |
 | 1.0.x | Reports accepted; fixes evaluated against current development |
 | < 1.0 | No |
 

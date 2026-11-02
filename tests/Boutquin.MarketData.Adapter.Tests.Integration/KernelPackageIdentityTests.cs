@@ -31,8 +31,8 @@ namespace Boutquin.MarketData.Adapter.Tests.Integration;
 
 public sealed class KernelPackageIdentityTests
 {
-    private const string ExpectedKernelVersion = "2.0.0-rc.20261027.4";
-    private const string ExpectedKernelCommit = "58622453a1456c9659b34a2a705dad62d867a86d";
+    private const string ExpectedKernelVersion = "2.0.1";
+    private const string ExpectedKernelCommit = "e6079f97343dad1298789d284b12dc6139aca6ec";
 
     private static readonly Type[] s_kernelAssemblyAnchors =
     [

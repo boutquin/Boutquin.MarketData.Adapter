@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Verify published Storage archive provenance, signatures and actual DLL versions/bytes."""
+"""Verify pinned Storage archive provenance, signing state and actual DLL versions/bytes."""
 import argparse
 import hashlib
 import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import runpy
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,20 +21,26 @@ def verify(packages, outputs, runtime_only=False):
     inspector = ROOT / 'scripts/package-inspector/bin/Release/net10.0/PackageInspector.dll'
     lock = json.loads((ROOT / 'dependency-source.json').read_text())
     identities, dll_hashes, archives = [], {}, []
-    for item in lock['publishedPackages']:
+    prepared = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py')) if lock.get('preparedPackages') else None
+    for item in lock['publishedPackages'] + lock.get('preparedPackages', []):
         if not item['id'].startswith('Boutquin.Storage.'):
             continue
         folder = packages / item['id'].lower() / item['version'].lower()
         if runtime_only and item['id'].endswith('.SourceGenerator') and not folder.exists():
             continue  # PrivateAssets build tool is intentionally absent from package consumers.
-        check.verify_cached_package(item, packages, item['packageSource'])
+        is_prepared = 'payloadSha256' in item and prepared['candidate_feed']() is not None
+        source = prepared['source'](item) if 'payloadSha256' in item else item['packageSource']
+        check.verify_cached_package(item, packages, source)
         archive_path = folder / (item['id'] + '.' + item['version'] + '.nupkg').lower()
-        signature = subprocess.run(['dotnet', 'nuget', 'verify', str(archive_path), '--all'],
-                                   check=True, capture_output=True, text=True)
-        if 'Content hash: ' + item['contentHash'] not in signature.stdout:
-            raise ValueError('Signed content hash differs: ' + item['id'])
-        archives.append({'id': item['id'], 'sha256': item['sha256'], 'source': item['packageSource'],
-                         'signatureVerification': signature.stdout})
+        signature_text = 'Exact sealed prepared archive; public repository signing is pending.'
+        if not is_prepared:
+            signature = subprocess.run(['dotnet', 'nuget', 'verify', str(archive_path), '--all'],
+                                       check=True, capture_output=True, text=True)
+            if 'Content hash: ' + item['contentHash'] not in signature.stdout:
+                raise ValueError('Signed content hash differs: ' + item['id'])
+            signature_text = signature.stdout
+        archives.append({'id': item['id'], 'sha256': hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                         'source': source, 'prepared': is_prepared, 'signatureVerification': signature_text})
         with zipfile.ZipFile(archive_path) as archive:
             names = [n for n in archive.namelist() if n.endswith('.dll') and Path(n).name.startswith('Boutquin.Storage.')]
             expected = {'Boutquin.Storage.SourceGenerator.dll', 'Boutquin.Storage.SourceGenerator.CodeFixes.dll'} if item['id'].endswith('.SourceGenerator') else {item['id'] + '.dll'}
@@ -77,7 +84,7 @@ def main():
     with args.report.open('x') as stream:
         json.dump(report, stream, indent=2)
         stream.write('\n')
-    print(f"PASS: {len(report['assemblies'])} published DLLs are assembly/file version 2.0.0.0; {len(report['runtimeCopies'])} runtime copies match signed archives")
+    print(f"PASS: {len(report['assemblies'])} Storage DLLs match their pinned assembly/file/informational versions; {len(report['runtimeCopies'])} runtime copies match verified archives")
 
 
 if __name__ == '__main__':

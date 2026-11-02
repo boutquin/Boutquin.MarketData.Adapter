@@ -5,23 +5,23 @@
       Cross-repo validation identity. Keep the exact published version and update both values from
       the same kernel HEAD; KernelPackageIdentityTests rejects reusable/stale packages.
     -->
-    <MarketDataKernelVersion>2.0.0-rc.20261027.4</MarketDataKernelVersion>
-    <MarketDataKernelCommit>58622453a1456c9659b34a2a705dad62d867a86d</MarketDataKernelCommit>
+    <MarketDataKernelVersion>2.0.1</MarketDataKernelVersion>
+    <MarketDataKernelCommit>e6079f97343dad1298789d284b12dc6139aca6ec</MarketDataKernelCommit>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Build infrastructure -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
 
     <!-- Adapter runtime dependencies -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
 
     <!-- Core MarketData packages -->
-    <PackageVersion Include="Boutquin.Domain" Version="1.0.0" />
+    <PackageVersion Include="Boutquin.Domain" Version="1.0.1" />
     <PackageVersion Include="Boutquin.MarketData.Abstractions" Version="$(MarketDataKernelVersion)" />
     <PackageVersion Include="Boutquin.MarketData.Calendars" Version="$(MarketDataKernelVersion)" />
     <PackageVersion Include="Boutquin.MarketData.Transport" Version="$(MarketDataKernelVersion)" />
@@ -42,14 +42,15 @@
     <PackageVersion Include="Boutquin.MarketData.DependencyInjection" Version="$(MarketDataKernelVersion)" />
 
     <!-- DI (needed for ServiceCollection in tests) -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
 
     <!-- Test infrastructure -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="xunit.analyzers" Version="2.2.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
   </ItemGroup>
 </Project>

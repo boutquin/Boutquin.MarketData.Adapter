@@ -38,8 +38,9 @@ public sealed class TwelveDataGoldenDataTests
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("symbol=AAPL", goldenData);
         var rawStore = new FakeRawDocumentStore();
+        // AAPL had no ex-dividend date in 2024-01-02..04, so /dividends answers an empty list.
         var adapter = new TwelveDataPriceBarAdapter(
-            transport,
+            new TwelveDataFundamentalsStubTransport(transport),
             rawStore,
             s_clock,
             new WeekendOnlyCalendar("TEST"),
@@ -64,7 +65,7 @@ public sealed class TwelveDataGoldenDataTests
         bar0.High.Should().Be(188.44m);
         bar0.Low.Should().Be(183.89m);
         bar0.Close.Should().Be(185.64m);
-        bar0.AdjustedClose.Should().Be(185.64m); // No adjClose in Twelve Data; close is used
+        bar0.AdjustedClose.Should().Be(185.64m); // No dividends in the window: total return equals price return
         bar0.Volume.Should().Be(82488700L);
 
         var bar1 = result.Payload[1];

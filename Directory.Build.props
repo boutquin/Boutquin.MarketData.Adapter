@@ -61,6 +61,10 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
+  <ItemGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Replace('\', '/').Contains('/tests/'))">
+    <PackageReference Include="xunit.analyzers" PrivateAssets="All" />
+  </ItemGroup>
+
   <!-- DateRange and other shared value objects are owned by Boutquin.Domain. -->
   <ItemGroup>
     <Using Include="Boutquin.Domain.ValueObjects" />

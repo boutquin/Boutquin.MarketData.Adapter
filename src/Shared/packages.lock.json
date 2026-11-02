@@ -4,27 +4,27 @@
     "net10.0": {
       "Boutquin.Domain": {
         "type": "Direct",
-        "requested": "[1.0.0, )",
-        "resolved": "1.0.0",
-        "contentHash": "I6GO5jM85f0TCXY2H/zW2OGa4Kz1KQZJ7OWOPxtSaLT94Fnb67AECymIPhKwosTnXdsKvicyPg8cLXwO9m2cDg=="
+        "requested": "[1.0.1, )",
+        "resolved": "1.0.1",
+        "contentHash": "tT7PhmUGA3ziZCFX/6TafzJANtg1gP6V/HV+Dt6M6s1+8+NKYQHbIXQgbg8mpnXJCaIr7X+yy2Pa63SCqrb2Yw=="
       },
       "Boutquin.MarketData.Abstractions": {
         "type": "Direct",
-        "requested": "[2.0.0-rc.20261027.4, )",
-        "resolved": "2.0.0-rc.20261027.4",
-        "contentHash": "K9oqOdb6GDDhPyCgyqvGjYhek95SBesmQvO2F+5IMFL2hTglVyqYUasHstCCMY3p3SQz8L3A9nrEavI04rJ/Mw==",
+        "requested": "[2.0.1, )",
+        "resolved": "2.0.1",
+        "contentHash": "R2piTf5wYylrMtjmK4z+eMqaGi/hd9lrIZPDkn36N4WfW7PFetqvc6qW7A7YawoAODjwm2qTrXv74SHEJPDhAA==",
         "dependencies": {
-          "Boutquin.Domain": "1.0.0",
-          "Boutquin.Storage.Domain": "2.0.0"
+          "Boutquin.Domain": "1.0.1",
+          "Boutquin.Storage.Domain": "2.0.1"
         }
       },
       "Boutquin.MarketData.Calendars": {
         "type": "Direct",
-        "requested": "[2.0.0-rc.20261027.4, )",
-        "resolved": "2.0.0-rc.20261027.4",
-        "contentHash": "NkvJytMXzQeX7RY/kM34sx2sFrh983TXO6F8UTfjcoVVS9Syo9JmpH3lR+XSbROwfM9/rTOMQjpyBP1bxLeFfw==",
+        "requested": "[2.0.1, )",
+        "resolved": "2.0.1",
+        "contentHash": "Xd2e6/9r1EI3rZwKyF5fwwI5wQVF6pvCWDtZRCnAc7hkjX9Memjd13GdxHRO3eM3qEyLnPqH4UCctl198MR6lg==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.0-rc.20261027.4"
+          "Boutquin.MarketData.Abstractions": "2.0.1"
         }
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
@@ -35,13 +35,13 @@
       },
       "Microsoft.SourceLink.GitHub": {
         "type": "Direct",
-        "requested": "[10.0.401, )",
-        "resolved": "10.0.401",
-        "contentHash": "LGmlwgP1Cx37JEWzyjS0o1/+xs/s/e3E2TBSuogI5ePA/9L0pfIfeYX0k5in7Bfcw8Nn2y2sG9jXxydTjiR2Fg==",
+        "requested": "[10.0.403, )",
+        "resolved": "10.0.403",
+        "contentHash": "T4WYxWydJGNQRe/EgURFlhPZ1cHYgivrCCHSomCcfQzGzhkDYGNn5bUwwjs4/PHuMxsmGaLvPv2puG8lluA1IA==",
         "dependencies": {
-          "Microsoft.Build.Tasks.Git": "10.0.401",
-          "Microsoft.SourceLink.Common": "10.0.401",
-          "System.IO.Hashing": "10.0.12"
+          "Microsoft.Build.Tasks.Git": "10.0.403",
+          "Microsoft.SourceLink.Common": "10.0.403",
+          "System.IO.Hashing": "10.0.14"
         }
       },
       "MinVer": {
@@ -52,29 +52,29 @@
       },
       "Boutquin.Storage.Domain": {
         "type": "Transitive",
-        "resolved": "2.0.0",
-        "contentHash": "fwZk9FtOuQpTT/MSuOFgJSHK9mTvMA/Z33TM4BvyPyMx0fcAzZv/rEHGMyoeW1mUqHX8ftpx+edRZcix3g7pOw==",
+        "resolved": "2.0.1",
+        "contentHash": "1A0Dn2pU1RFia0qLyfBx8ZfX5T/HCyiswx9MxRxPU6WI18omgqdeHbZKyZ7+3gxgKa7MfxLOAJFInxtPCEXGmQ==",
         "dependencies": {
-          "Boutquin.Domain": "[1.0.0]"
+          "Boutquin.Domain": "[1.0.1]"
         }
       },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
-        "resolved": "10.0.401",
-        "contentHash": "ZYctNuT10V9IYyCFydy63DXx0ggZQuynuzQOdLvW62dPgzjIz7f0ISEP75RGiq1jFQh8p6TmGSqxeQZQ87LCig==",
+        "resolved": "10.0.403",
+        "contentHash": "1furteBFeemMmZ4s+ORjQb7YtO+wG63NJahbQbRUi91FV6V87BdV0U3vX1jbMC6iKSELYYoXWssSzLu3mx0i2w==",
         "dependencies": {
-          "System.IO.Hashing": "10.0.12"
+          "System.IO.Hashing": "10.0.14"
         }
       },
       "Microsoft.SourceLink.Common": {
         "type": "Transitive",
-        "resolved": "10.0.401",
-        "contentHash": "u3rLxIwi/9MqDFaWGE/QQgLR1NBEzLOW2lv5+9OrZPDBYIAmFdYSWCWrR1ufpXWOqFn+x02TgKropl/oDuHmgA=="
+        "resolved": "10.0.403",
+        "contentHash": "SvzUeqFGrcQxlIgjmcoSGiV5UWcPa0NCTuH69/40uSDsSD/26c6p9cH7XLAxpn+I8+2Zhl1qp+WMugl0oOwBMg=="
       },
       "System.IO.Hashing": {
         "type": "Transitive",
-        "resolved": "10.0.12",
-        "contentHash": "jDix4bBMYnpZdSPcnY+KDV6ik3SRMzpMKby/bZl/XUwIiflwRNAFZ0oOl61R/pSaveIJ8t1gs2BUlrGsPs/bcg=="
+        "resolved": "10.0.14",
+        "contentHash": "lVqovhCt3HlZe7ONG5ydaj6BYwYI004gldVfMMkJl/lR5ueeCtWNpW4nejOX75sPmzm8vXCxB69GqwHaYCnyUQ=="
       }
     }
   }

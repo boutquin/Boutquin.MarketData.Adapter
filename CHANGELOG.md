@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-11-02
+
+The first stable release after 2.0.0-rc.20261027.4. A 2.0.0 stable was prepared but never published, so its changes (listed below under 2.0.0) ship here. Requires MarketData kernel 2.0.1, published to nuget.org from source `e6079f9`.
+
+### Changed — BREAKING
+- TwelveData prices are requested split-adjusted (`adjust=splits`, raw key `twelvedata/daily-splits/...`); `Close`, `Open`, `High` and `Low` are those split-adjusted prices. `AdjustedClose` is now a total return computed by the adapter from Twelve Data's `/dividends` cash list (raw key `twelvedata/dividends/...`): each dividend `D` multiplies earlier bars by `C_E / (C_E + D)`, so the ex-date return is exactly `(C_E + D) / C_prev - 1`, and the window's last bar is the anchor (`AdjustedClose == Close`). Twelve Data's own `adjust=all` series is no longer used because it applies a wrong-signed extra adjustment on some Canadian distribution dates (reinvested year-end distributions with unit consolidation). Payloads under the earlier `twelvedata/daily/`, `daily-all/` and `daily-splits/` keys and every `Bar` snapshot built from them must be purged.
+- TwelveData fails closed on dividend data: a failed or error-bearing `/dividends` or `/splits` request returns `FETCH_FAILED` and no bars; a split on or after an applicable ex-date returns `DIVIDEND_SPLIT_BASIS_UNVERIFIED` and no bars; dividends that no in-window return spans are reported as `DIVIDEND_OUTSIDE_BARS`. Each symbol fetch now spends fundamentals credits on `/dividends` (and `/splits` when a dividend applies).
+- TwelveData total return is exact for the events Twelve Data lists only (limitation `twelvedata_computed_total_return_listed_events_only`). Three provider-list failure modes are undetected: unlisted splits; cash distributions the provider omits (an empty or short `/dividends` response reads as no dividends, e.g. VCN on XTSE for 2020 returned three rows, none between 2020-06-22 and 2020-12-30); and a listed row that was a reinvested or notional distribution, credited as cash.
+- TwelveData sums the dividends of several ex-dates credited to the same bar (non-trading days or a provider gap) before forming the factor, so that bar's adjusted return is exactly `(C + D1 + D2) / C_prev - 1` rather than the product of two separate factors.
+- Tiingo price rows without a positive numeric `adjClose` return `FETCH_FAILED` naming the date and no bars, instead of reusing the raw close as the adjusted close.
+
+### Changed
+- Refreshes stable third-party dependencies and build tooling.
+- Retains assembly version 2.0.0.0 and advances file version to 2.0.1.0.
+- Uses fresh package identities; previously qualified 2.0.0 and RC archives remain immutable.
+
+### Added
+- Publishing uses nuget.org trusted publishing (GitHub OIDC); the workflow no longer reads a long-lived API key.
+
+## [2.0.0] — not published; shipped as 2.0.1
+
+### Changed
+- Targets MarketData 2.0.0 and published Storage 2.0.0; all Adapter package and DLL versions follow the 2.0 stable line.
+- Stable installation and migration instructions, immutable stable documentation links, and exact stable-tag validation for the frozen-archive publisher.
+- Retains the RC4 runtime behavior and the changes documented below. Optional features remain opt-in.
+
 ## [2.0.0-rc.20261027.4] — 2026-10-27
 
 - CORRA selects the actual Valet rate series `AVG.INTWO` through explicit `CorraSeriesCode`; Bank of Canada FX/CORRA coverage uses the Canadian statutory calendar. Primary payload and publication-date regressions cover the correction.
@@ -16,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Breaking:** credential-bearing Tiingo, TwelveData and FRED endpoints require an absolute HTTPS base URL. All adapter cancellation exceptions propagate instead of being converted to partial data; callers should handle cancellation separately from data-quality failures.
 - **Breaking:** price adapters and Frankfurter FX require one symbol/pair per direct request because flat canonical records cannot retain multiple owners. Partition batches in the kernel. Unsupported direct requests fail before I/O.
 - Validate provider identity, clip observations to request bounds, select Bank of Canada curve rows chronologically within the lookback, and avoid false no-data errors for expected empty publication days.
-- Request unadjusted TwelveData prices explicitly; keep its `AdjustedClose = Close` limitation visible. Tiingo metadata no longer mislabels earliest price history as instrument inception.
+- Request TwelveData prices on an explicit basis and key raw payloads by basis so no cache warmed on another basis is reused (superseded in Unreleased by split-adjusted prices with an adapter-computed total return). Tiingo metadata no longer mislabels earliest price history as instrument inception.
 - Sanitize public failure messages and FRED provenance URLs. Bound Fama-French decompression, stop at CSV table boundaries, reject malformed ECB CSV and Treasury DTDs, and skip irrelevant CME files before I/O.
 - Preserve custom keyed calendar overrides. Adapter-built calendars carry explicit 2020–2030 bounds and warn outside them; SOFR and Treasury use their respective publication calendars.
 

@@ -68,7 +68,7 @@ def verify(feed: Path, version: str, commit: str, manifest: Path, inspector: Pat
             stream.write("\n")
     readme = source_bytes(commit, "README.md")
     dependency_lock = json.loads(source_bytes(commit, "dependency-source.json"))
-    dependency_versions = {item["id"]: item["version"] for item in dependency_lock["packages"] + dependency_lock.get("publishedPackages", [])}
+    dependency_versions = {item["id"]: item["version"] for item in dependency_lock["packages"] + dependency_lock.get("publishedPackages", []) + dependency_lock.get("preparedPackages", [])}
     central_xml = ET.fromstring(source_bytes(commit, "Directory.Packages.props"))
     properties = {item.tag: item.text for group in central_xml.findall("PropertyGroup") for item in group}
     central = {item.get("Include"): re.sub(r"\$\(([^)]+)\)", lambda m: properties[m.group(1)], item.get("Version")) for item in central_xml.findall(".//PackageVersion")}

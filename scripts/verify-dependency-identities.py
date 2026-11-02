@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify exact kernel DLLs and signed published Storage DLLs, including runtime copies."""
+"""Verify exact kernel DLLs and qualified Storage DLLs, including runtime copies."""
 import argparse
 import hashlib
 import json
@@ -21,23 +21,30 @@ def main():
     cache, outputs = args.packages.resolve(), args.outputs.resolve()
     lock = json.loads((ROOT / 'dependency-source.json').read_text())
     # Adapter does not consume the generator. Restore it only in an isolated metadata probe
-    # so the same four published Storage DLL identities can be inspected independently.
-    probe = not (cache / 'boutquin.storage.sourcegenerator/2.0.0').exists()
+    # so the same four qualified Storage DLL identities can be inspected independently.
+    generator = next(item for item in lock['publishedPackages'] + lock.get('preparedPackages', []) if item['id'] == 'Boutquin.Storage.SourceGenerator')
+    generator_version = generator['version']
+    probe = not (cache / 'boutquin.storage.sourcegenerator' / generator_version.lower()).exists()
     if probe:
         (ROOT / 'artifacts').mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='storage-identity-probe-', dir=ROOT / 'artifacts') as temp:
             path = Path(temp)
             (path / 'Directory.Build.props').write_text('<Project />')
-            (path / 'probe.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup><ItemGroup><PackageReference Include="Boutquin.Storage.SourceGenerator" Version="[2.0.0]" /></ItemGroup></Project>')
+            (path / 'probe.csproj').write_text(f'<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup><ItemGroup><PackageReference Include="Boutquin.Storage.SourceGenerator" Version="[{generator_version}]" /></ItemGroup></Project>')
+            config = ROOT / 'nuget.ci.config'
+            prepared = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py'))
+            if prepared['candidate_feed']() is not None:
+                config = path / 'nuget.config'
+                subprocess.run(['python3', str(ROOT / 'scripts/prepared-dependencies.py'), '--config', str(config)], check=True, stdout=subprocess.DEVNULL)
             subprocess.run(['dotnet', 'restore', str(path / 'probe.csproj'), '--packages', str(cache),
-                            '--configfile', str(ROOT / 'nuget.ci.config'), '--no-http-cache',
+                            '--configfile', str(config), '--no-http-cache',
                             '-p:_WorkloadLibraryPacksFolder=' + str(path / 'absent-sdk-feed')], check=True, stdout=subprocess.DEVNULL)
     storage = runpy.run_path(str(ROOT / 'scripts/verify-published-storage.py'))['verify'](cache, outputs)
     inspector = ROOT / 'scripts/package-inspector/bin/Release/net10.0/PackageInspector.dll'
     checker = runpy.run_path(str(ROOT / 'scripts/check-runner-dependencies.py'))
     identities, hashes = [], {}
     with tempfile.TemporaryDirectory(prefix='kernel-identity-') as temp:
-        for item in lock['publishedPackages']:
+        for item in lock['publishedPackages'] + lock.get('preparedPackages', []):
             if not item['id'].startswith('Boutquin.MarketData.'):
                 continue
             archive_path = cache / item['id'].lower() / item['version'].lower() / item['file'].lower()
@@ -45,8 +52,13 @@ def main():
                 # Inspect the complete kernel inventory even when a package is not a runtime dependency.
                 import urllib.request
                 archive_path.parent.mkdir(parents=True, exist_ok=True)
-                with urllib.request.urlopen(item['downloadUrl']) as response:
-                    archive_path.write_bytes(response.read())
+                prepared = runpy.run_path(str(ROOT / 'scripts/prepared-dependencies.py'))
+                feed = prepared['candidate_feed']() if 'payloadSha256' in item else None
+                if feed is not None:
+                    archive_path.write_bytes((feed / item['file']).read_bytes())
+                else:
+                    with urllib.request.urlopen(item['downloadUrl']) as response:
+                        archive_path.write_bytes(response.read())
             checker['verify_archive'](item, archive_path)
             with zipfile.ZipFile(archive_path) as archive:
                 name = item['id'] + '.dll'
@@ -72,7 +84,7 @@ def main():
     with args.report.open('x') as stream:
         json.dump(report, stream, indent=2)
         stream.write('\n')
-    print(f'PASS: 12 qualified kernel and 4 published Storage DLLs have assembly/file version 2.0.0.0; {len(copies)} kernel and {len(storage["runtimeCopies"])} Storage runtime copies match')
+    print(f'PASS: 12 qualified kernel and 4 qualified Storage DLLs match pinned assembly/file/informational versions; {len(copies)} kernel and {len(storage["runtimeCopies"])} Storage runtime copies match')
 
 
 if __name__ == '__main__':
