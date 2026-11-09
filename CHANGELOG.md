@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [3.0.0] — 2026-11-08
 
-Release documentation date; publication remains a separate authorized step.
+Published to NuGet.org from the qualified immutable release archives.
 
 ### Breaking
 - Price requests require an explicit validated `PriceBasis` and cache identity includes its stable token.
