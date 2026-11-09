@@ -89,6 +89,7 @@ public sealed class TwelveDataTotalReturnTests
     private static PriceHistoryRequest Request(string from, string to, ExchangeCode? exchange = null) =>
         new([new Symbol("XEQT")], new DateRange(DateOnly.Parse(from, CultureInfo.InvariantCulture), DateOnly.Parse(to, CultureInfo.InvariantCulture)))
         {
+            Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis,
             Exchange = exchange,
         };
 
@@ -199,7 +200,7 @@ public sealed class TwelveDataTotalReturnTests
             TwelveDataFundamentalsStubTransport.NoSplits);
         var request = new PriceHistoryRequest([new Symbol(symbol)],
             new DateRange(DateOnly.Parse(bars[0].Date, CultureInfo.InvariantCulture), DateOnly.Parse(bars[^1].Date, CultureInfo.InvariantCulture)))
-        { Exchange = ExchangeCode.XTSE };
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE };
 
         var result = await CreateAdapter(transport).FetchAsync(request);
 

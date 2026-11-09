@@ -35,3 +35,12 @@ scripts/replay-robustness-controls.py export-ignore
 .github/workflows/qualify-stable-private.yml export-ignore
 
 .github/workflows/qualify-patch-private.yml export-ignore
+
+# Preserve fingerprinted API bytes across Windows and Unix checkouts.
+/src/*/PublicAPI.*.txt text eol=lf
+/specs/verification/price-basis-2.1/mutations/*.patch -whitespace
+
+.github/workflows/pricebasis-verification.yml export-ignore
+
+# This private test exercises the export-ignored sealed kernel preparer.
+scripts/tests/test_prepare_release_kernel.py export-ignore

@@ -219,10 +219,10 @@
       "Boutquin.MarketData.Adapter.BankOfCanada": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -231,10 +231,10 @@
       "Boutquin.MarketData.Adapter.BankOfEngland": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -243,10 +243,10 @@
       "Boutquin.MarketData.Adapter.Cme": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -255,10 +255,10 @@
       "Boutquin.MarketData.Adapter.Ecb": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -267,10 +267,10 @@
       "Boutquin.MarketData.Adapter.FamaFrench": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -279,10 +279,10 @@
       "Boutquin.MarketData.Adapter.Frankfurter": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -291,10 +291,10 @@
       "Boutquin.MarketData.Adapter.Fred": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -303,10 +303,10 @@
       "Boutquin.MarketData.Adapter.NewYorkFed": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -316,17 +316,17 @@
         "type": "Project",
         "dependencies": {
           "Boutquin.Domain": "[1.0.1, )",
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
-          "Boutquin.MarketData.Calendars": "[2.0.1, )"
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
+          "Boutquin.MarketData.Calendars": "[3.0.0, )"
         }
       },
       "Boutquin.MarketData.Adapter.Tiingo": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -335,10 +335,10 @@
       "Boutquin.MarketData.Adapter.TwelveData": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -347,10 +347,10 @@
       "Boutquin.MarketData.Adapter.UsTreasury": {
         "type": "Project",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "[2.0.1, )",
+          "Boutquin.MarketData.Abstractions": "[3.0.0, )",
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
-          "Boutquin.MarketData.Storage": "[2.0.1, )",
-          "Boutquin.MarketData.Transport": "[2.0.1, )",
+          "Boutquin.MarketData.Storage": "[3.0.0, )",
+          "Boutquin.MarketData.Transport": "[3.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
@@ -364,9 +364,9 @@
       },
       "Boutquin.MarketData.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "R2piTf5wYylrMtjmK4z+eMqaGi/hd9lrIZPDkn36N4WfW7PFetqvc6qW7A7YawoAODjwm2qTrXv74SHEJPDhAA==",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "eAkotKSpmLLycKC+i18WElkVPNMpMnWCeyxN+WjcbJVWtIc3gEIY7xuAb3mk081htVP8hFj2tobMIZUHfrsRBA==",
         "dependencies": {
           "Boutquin.Domain": "1.0.1",
           "Boutquin.Storage.Domain": "2.0.1"
@@ -374,30 +374,30 @@
       },
       "Boutquin.MarketData.Calendars": {
         "type": "CentralTransitive",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "Xd2e6/9r1EI3rZwKyF5fwwI5wQVF6pvCWDtZRCnAc7hkjX9Memjd13GdxHRO3eM3qEyLnPqH4UCctl198MR6lg==",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "/Dt+gdNQxdVFPBS+TVi09TzHlWrkD4S1Bve7cGdbVaGp+4gvDXGHXMnrf7ixN7HWXtXH7mB/vP4mRaIg59K9FQ==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.1"
+          "Boutquin.MarketData.Abstractions": "3.0.0"
         }
       },
       "Boutquin.MarketData.Storage": {
         "type": "CentralTransitive",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "LLyZc+T4BNNrQqtTr+l/KL/8ayGMZ69xv3ugrjO6Xc8LDYWJ/14pMZWjxQZ6PRbNMIMbeh6gD0vCyQNfo/7T8A==",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "SUTbVaOIgL8Uwqq7MVr+s5qgVbSkjn9EzWISXJmsSLYUlxBr/7tmsjai6usR9NkjSBeClb/4FWIAjvQA+X10hw==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.1",
+          "Boutquin.MarketData.Abstractions": "3.0.0",
           "Boutquin.Storage.Infrastructure": "2.0.1"
         }
       },
       "Boutquin.MarketData.Transport": {
         "type": "CentralTransitive",
-        "requested": "[2.0.1, )",
-        "resolved": "2.0.1",
-        "contentHash": "6lXhH4+hoIOr7/I++d4BSejFI9DbuGw9WlZt3KUw+UxKieLpJLfYPQz9IgNNtrzDX9QXTzvGkTD8ts0i7i7BKg==",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "56I7WXXeGKwhbspXVRDmhuWWQPndY7cF8X0bOQhotF2vqhQsSTyRBpFGity80oW9XIncqv/CL5/Pey2LxKUGAw==",
         "dependencies": {
-          "Boutquin.MarketData.Abstractions": "2.0.1",
+          "Boutquin.MarketData.Abstractions": "3.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.14",
           "Polly.Core": "8.9.0",
           "Polly.RateLimiting": "8.9.0",

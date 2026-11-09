@@ -2,11 +2,11 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!--
-      Cross-repo validation identity. Keep the exact published version and update both values from
+      Cross-repo validation identity. Keep the exact qualified version and update both values from
       the same kernel HEAD; KernelPackageIdentityTests rejects reusable/stale packages.
     -->
-    <MarketDataKernelVersion>2.0.1</MarketDataKernelVersion>
-    <MarketDataKernelCommit>e6079f97343dad1298789d284b12dc6139aca6ec</MarketDataKernelCommit>
+    <MarketDataKernelVersion>3.0.0</MarketDataKernelVersion>
+    <MarketDataKernelCommit>ff2dc894b1d904d852fa11625f513a9abee52b48</MarketDataKernelCommit>
   </PropertyGroup>
 
   <ItemGroup>

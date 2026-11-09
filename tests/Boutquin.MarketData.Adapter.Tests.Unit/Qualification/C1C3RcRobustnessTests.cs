@@ -102,7 +102,7 @@ public sealed class C1C3RcRobustnessTests
     {
         var transport = new RecordingTransport("[]");
         var adapter = Price(provider, transport);
-        var request = new PriceHistoryRequest([new Symbol("AAPL"), new Symbol("MSFT")], s_range);
+        var request = new PriceHistoryRequest([new Symbol("AAPL"), new Symbol("MSFT")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         adapter.CanHandle(request).Should().BeFalse();
         Func<Task> fetch = () => adapter.FetchAsync(request);
         await fetch.Should().ThrowAsync<ArgumentException>();
@@ -142,8 +142,8 @@ public sealed class C1C3RcRobustnessTests
         var adapter = Price(provider, transport);
         foreach (var request in new[]
         {
-            new PriceHistoryRequest([new Symbol("AAPL")], s_range, DataFrequency.Weekly),
-            new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Exchange = ExchangeCode.XLON },
+            new PriceHistoryRequest([new Symbol("AAPL")], s_range, DataFrequency.Weekly) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis },
+            new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis,  Exchange = ExchangeCode.XLON },
         })
         {
             Func<Task> fetch = () => adapter.FetchAsync(request);
@@ -285,7 +285,7 @@ public sealed class C1C3RcRobustnessTests
         }
         else if (provider == "twelvedata-price")
         {
-            issues = (await Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range))).Issues;
+            issues = (await Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis })).Issues;
         }
         else
         {
@@ -305,7 +305,7 @@ public sealed class C1C3RcRobustnessTests
     public async Task TwelveData_refuses_conflicting_supplied_time_series_identity(string metadata)
     {
         var response = $$"""{"meta":{ {{metadata}} },"values":[{"datetime":"2024-01-08",{{BarValues}}}]}""";
-        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Exchange = ExchangeCode.XNAS });
+        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XNAS });
         result.Payload.Should().BeEmpty();
         result.Issues.Should().Contain(i => i.Code == new IssueCode("FETCH_FAILED"));
     }
@@ -314,7 +314,7 @@ public sealed class C1C3RcRobustnessTests
     public async Task TwelveData_matching_supplied_identity_remains_usable()
     {
         var response = $$"""{"meta":{"symbol":"aapl","interval":"1day","mic_code":"XNAS","exchange":"NASDAQ"},"values":[{"datetime":"2024-01-08",{{BarValues}}}]}""";
-        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Exchange = ExchangeCode.XNAS });
+        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XNAS });
         result.Payload.Should().ContainSingle().Which.Close.Should().Be(100m);
     }
 
@@ -332,7 +332,7 @@ public sealed class C1C3RcRobustnessTests
     {
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("time_series", "{\"values\":[]}");
-        await Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
+        await Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis });
         System.Web.HttpUtility.ParseQueryString(transport.RequestedUris.Single().Query)["adjust"].Should().Be("splits");
     }
 
@@ -345,7 +345,7 @@ public sealed class C1C3RcRobustnessTests
         var store = new FakeRawDocumentStore();
         var adapter = new TwelveDataPriceBarAdapter(transport, store, s_clock, new WeekendOnlyCalendar("TEST"),
             Options.Create(new TwelveDataOptions()), NullLogger<TwelveDataPriceBarAdapter>.Instance);
-        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], s_range) { Exchange = ExchangeCode.XTSE });
+        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE });
 
         var query = System.Web.HttpUtility.ParseQueryString(prices.RequestedUris.Single().Query);
         query["adjust"].Should().Be("splits");
@@ -378,7 +378,7 @@ public sealed class C1C3RcRobustnessTests
         var response = provider == "tiingo"
             ? $$"""[{"date":"2024-01-08T00:00:00Z","open":100,"high":{{high}},"low":99,"close":100,"volume":{{volume}}}]"""
             : $$"""{"values":[{"datetime":"2024-01-08","open":"100","high":"{{high}}","low":"99","close":"100","volume":"{{volume}}"}]}""";
-        var result = await Price(provider, new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
+        var result = await Price(provider, new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis });
         result.Payload.Should().BeEmpty();
         result.Issues.Should().Contain(i => i.Code == new IssueCode("FETCH_FAILED"));
     }
@@ -391,7 +391,7 @@ public sealed class C1C3RcRobustnessTests
         var response = provider == "tiingo"
             ? """[{"date":"01/08/2024T00:00:00Z","open":100,"high":101,"low":99,"close":100,"volume":10}]"""
             : $$"""{"values":[{"datetime":"01/08/2024",{{BarValues}}}]}""";
-        var result = await Price(provider, new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
+        var result = await Price(provider, new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis });
         result.Payload.Should().BeEmpty();
         result.Issues.Should().Contain(i => i.Code == new IssueCode("FETCH_FAILED"));
     }
@@ -475,13 +475,13 @@ public sealed class C1C3RcRobustnessTests
         Func<Task> fetch = provider switch
         {
             "tiingo-price" => () => new TiingoPriceBarAdapter(transport, raw, s_clock, calendar, tiingo, NullLogger<TiingoPriceBarAdapter>.Instance)
-                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }),
             "tiingo-meta" => () => new TiingoInstrumentMetadataAdapter(transport, raw, s_clock, tiingo, NullLogger<TiingoInstrumentMetadataAdapter>.Instance)
                 .FetchAsync(new InstrumentMetadataRequest([new Symbol("AAPL")])),
             "tiingo-dividend" => () => new TiingoDividendHistoryAdapter(transport, raw, s_clock, tiingo, NullLogger<TiingoDividendHistoryAdapter>.Instance)
                 .FetchAsync(new DividendHistoryRequest([new Symbol("AAPL")], s_range)),
             "twelvedata-price" => () => new TwelveDataPriceBarAdapter(transport, raw, s_clock, calendar, twelve, NullLogger<TwelveDataPriceBarAdapter>.Instance)
-                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }),
             "twelvedata-meta" => () => new TwelveDataInstrumentMetadataAdapter(transport, raw, s_clock, twelve, NullLogger<TwelveDataInstrumentMetadataAdapter>.Instance)
                 .FetchAsync(new InstrumentMetadataRequest([new Symbol("AAPL")])),
             _ => throw new ArgumentException("Unknown test provider.", nameof(provider)),
@@ -517,13 +517,13 @@ public sealed class C1C3RcRobustnessTests
         Func<Task> fetch = provider switch
         {
             "tiingo-price" => () => new TiingoPriceBarAdapter(transport, raw, s_clock, calendar, tiingo, new CapturingLogger<TiingoPriceBarAdapter>(entries))
-                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }),
             "tiingo-meta" => () => new TiingoInstrumentMetadataAdapter(transport, raw, s_clock, tiingo, new CapturingLogger<TiingoInstrumentMetadataAdapter>(entries))
                 .FetchAsync(new InstrumentMetadataRequest([new Symbol("AAPL")])),
             "tiingo-dividend" => () => new TiingoDividendHistoryAdapter(transport, raw, s_clock, tiingo, new CapturingLogger<TiingoDividendHistoryAdapter>(entries))
                 .FetchAsync(new DividendHistoryRequest([new Symbol("AAPL")], s_range)),
             "twelvedata-price" => () => new TwelveDataPriceBarAdapter(transport, raw, s_clock, calendar, twelve, new CapturingLogger<TwelveDataPriceBarAdapter>(entries))
-                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }),
             "twelvedata-meta" => () => new TwelveDataInstrumentMetadataAdapter(transport, raw, s_clock, twelve, new CapturingLogger<TwelveDataInstrumentMetadataAdapter>(entries))
                 .FetchAsync(new InstrumentMetadataRequest([new Symbol("AAPL")])),
             _ => throw new ArgumentException("Unknown test provider.", nameof(provider)),
@@ -552,7 +552,7 @@ public sealed class C1C3RcRobustnessTests
         {
             case "tiingo-price":
             case "twelvedata":
-                await Price(provider == "tiingo-price" ? "tiingo" : provider, transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range), token);
+                await Price(provider == "tiingo-price" ? "tiingo" : provider, transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis }, token);
                 break;
             case "tiingo-meta":
                 await new TiingoInstrumentMetadataAdapter(transport, new FakeRawDocumentStore(), s_clock, Options.Create(new TiingoOptions()), NullLogger<TiingoInstrumentMetadataAdapter>.Instance)
@@ -601,8 +601,8 @@ public sealed class C1C3RcRobustnessTests
         transport.ThrowOnNext(cancellation);
         Func<Task> fetch = provider switch
         {
-            "tiingo-price" => () => Price("tiingo", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
-            "twelvedata" => () => Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+            "tiingo-price" => () => Price("tiingo", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }),
+            "twelvedata" => () => Price("twelvedata", transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }),
             "tiingo-meta" => () => new TiingoInstrumentMetadataAdapter(transport, new FakeRawDocumentStore(), s_clock, Options.Create(new TiingoOptions()), NullLogger<TiingoInstrumentMetadataAdapter>.Instance)
                 .FetchAsync(new InstrumentMetadataRequest([new Symbol("AAPL")])),
             "tiingo-dividend" => () => new TiingoDividendHistoryAdapter(transport, new FakeRawDocumentStore(), s_clock, Options.Create(new TiingoOptions()), NullLogger<TiingoDividendHistoryAdapter>.Instance)
@@ -640,11 +640,11 @@ public sealed class C1C3RcRobustnessTests
             Func<Task> fetch = provider switch
             {
                 "tiingo-price" => () => new TiingoPriceBarAdapter(transport, raw, s_clock, calendar, Options.Create(new TiingoOptions()), NullLogger<TiingoPriceBarAdapter>.Instance)
-                    .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                    .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }),
                 "tiingo-dividend" => () => new TiingoDividendHistoryAdapter(transport, raw, s_clock, Options.Create(new TiingoOptions()), NullLogger<TiingoDividendHistoryAdapter>.Instance)
                     .FetchAsync(new DividendHistoryRequest([new Symbol("AAPL")], s_range)),
                 "twelvedata" => () => new TwelveDataPriceBarAdapter(transport, raw, s_clock, calendar, Options.Create(new TwelveDataOptions()), NullLogger<TwelveDataPriceBarAdapter>.Instance)
-                    .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range)),
+                    .FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }),
                 "frankfurter" => () => new FrankfurterFxAdapter(transport, raw, s_clock, calendar, Options.Create(new FrankfurterOptions()), NullLogger<FrankfurterFxAdapter>.Instance)
                     .FetchAsync(new FxHistoryRequest([new FxPair(Currency.EUR, Currency.USD)], s_range)),
                 "CORRA" => () => new BankOfCanadaCorraAdapter(transport, raw, s_clock, calendar, Options.Create(new BankOfCanadaOptions()), NullLogger<BankOfCanadaCorraAdapter>.Instance)
@@ -683,7 +683,7 @@ public sealed class C1C3RcRobustnessTests
                 Options.Create(new TiingoOptions { BaseUrl = endpoint }), NullLogger<TiingoPriceBarAdapter>.Instance)
             : new TwelveDataPriceBarAdapter(transport, new FakeRawDocumentStore(), s_clock, new WeekendOnlyCalendar("TEST"),
                 Options.Create(new TwelveDataOptions { BaseUrl = endpoint }), NullLogger<TwelveDataPriceBarAdapter>.Instance);
-        Func<Task> fetch = () => adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
+        Func<Task> fetch = () => adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = provider == "tiingo" || provider == "tiingo-price" ? TiingoPriceBarAdapter.DeliveredPriceBasis : TwelveDataPriceBarAdapter.DeliveredPriceBasis });
         await fetch.Should().ThrowAsync<ArgumentException>().WithParameterName("BaseUrl");
         transport.ObservedToken.Should().BeNull();
     }
@@ -696,7 +696,7 @@ public sealed class C1C3RcRobustnessTests
         var first = reverse ? "100" : "100.5";
         var second = reverse ? "100.5" : "100";
         var response = $$"""{"values":[{"datetime":"2024-01-08","open":"100","high":"101","low":"99","close":"{{first}}","volume":"10"},{"datetime":"2024-01-08","open":"100","high":"101","low":"99","close":"{{second}}","volume":"10"}]}""";
-        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range));
+        var result = await Price("twelvedata", new RecordingTransport(response)).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], s_range) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis });
         result.Payload.Should().BeEmpty();
         result.Issues.Should().Contain(i => i.Code == new IssueCode("FETCH_FAILED"));
     }

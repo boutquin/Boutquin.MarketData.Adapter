@@ -11,3 +11,5 @@ Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.FetchAsync(Boutquin.MarketD
 Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.Priority.get -> int
 Boutquin.MarketData.Adapter.Cme.ServiceCollectionExtensions
 static Boutquin.MarketData.Adapter.Cme.ServiceCollectionExtensions.AddMarketDataCme(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Cme.CmeOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.CmeSettlementAdapter(Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Cme.CmeOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Cme.CmeSettlementAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

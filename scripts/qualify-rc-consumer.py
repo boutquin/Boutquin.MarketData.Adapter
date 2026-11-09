@@ -165,7 +165,7 @@ public sealed class FrozenAdapterIdentityTests
         foreach (var package in root.GetProperty("packages").EnumerateArray())
         {
             var assembly = Assembly.Load(package.GetProperty("id").GetString()!);
-            Assert.Equal("2.0.0.0", assembly.GetName().Version!.ToString());
+            Assert.Equal(root.GetProperty("version").GetString()!.Split('-')[0].Split('.')[0] + ".0.0.0", assembly.GetName().Version!.ToString());
             Assert.Equal(root.GetProperty("version").GetString()!.Split('-')[0] + ".0", System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion);
             Assert.Equal(expected, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion);
             Assert.Equal(package.GetProperty("dllSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))).ToLowerInvariant());

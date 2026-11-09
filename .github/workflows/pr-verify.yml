@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       qualification_version:
-        description: Exact 2.0.0/2.0.1 stable or numeric RC version to verify without publication
+        description: Exact stable or numeric RC identity without publication
         required: false
         type: string
       source_ref:
@@ -35,7 +35,7 @@ jobs:
       - name: Validate qualification version
         run: |
           if [[ -n "$MinVerVersionOverride" ]]; then
-            [[ "$MinVerVersionOverride" =~ ^2\.0\.[01](-rc\.[0-9]+(\.[0-9]+)*)?$ ]]
+            [[ "$MinVerVersionOverride" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[0-9]+(\.[0-9]+)*)?$ ]]
           fi
 
       - name: Enable long paths for preserved private evidence on Windows
@@ -62,10 +62,14 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Verify released API fingerprints
+        run: python3 scripts/check-api-release-baseline.py
+
       - name: Verify release documentation describes the qualified version
         run: |
           if [[ "$MinVerVersionOverride" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             python3 scripts/check-release-docs.py "$MinVerVersionOverride"
+            python3 scripts/check-api-release-baseline.py --release
           fi
 
       - name: Initialize cold NuGet directories

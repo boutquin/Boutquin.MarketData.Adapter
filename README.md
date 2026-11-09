@@ -1,9 +1,9 @@
 # Boutquin.MarketData.Adapter
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/LICENSE.txt)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/LICENSE.txt)
 [![Build](https://github.com/boutquin/Boutquin.MarketData.Adapter/actions/workflows/pr-verify.yml/badge.svg)](https://github.com/boutquin/Boutquin.MarketData.Adapter/actions/workflows/pr-verify.yml)
 
-> **2.0.1:** targets MarketData `2.0.1` and Storage `2.0.1` from NuGet.org. See [migration](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/docs/migration-2.0.md) and [build verification](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/docs/runner-dependencies.md).
+> **3.0.0:** requires an explicit `PriceBasis` for every price request and targets the MarketData `3.0.0` kernel. Storage remains on its qualified `2.0.1` dependency. See [migration](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/migration-3.0.md) and [build verification](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/runner-dependencies.md).
 
 Concrete data source adapters for the [Boutquin.MarketData](https://github.com/boutquin/Boutquin.MarketData) kernel. Each adapter implements `IDataSourceAdapter<TRequest, TRecord>` from `Boutquin.MarketData.Abstractions` and self-registers via an `AddMarketData*()` extension method on `IServiceCollection`. Adapters are standalone NuGet packages — install only the ones you need.
 
@@ -23,7 +23,7 @@ Concrete data source adapters for the [Boutquin.MarketData](https://github.com/b
 | `Boutquin.MarketData.Adapter.FamaFrench` | [Ken French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html) | `FactorObservation` | Anonymous |
 | `Boutquin.MarketData.Adapter.Cme` | CME Group settlement CSV files | `FuturesSettlement` | File-based |
 
-See [docs/adapters.md](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/docs/adapters.md) for per-adapter configuration details, rate limits, publication lag notes, and data-quality caveats.
+See [docs/adapters.md](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/adapters.md) for per-adapter configuration details, rate limits, publication lag notes, and data-quality caveats.
 
 ## Design Principles
 
@@ -37,8 +37,8 @@ See [docs/adapters.md](https://github.com/boutquin/Boutquin.MarketData.Adapter/b
 ## Quick Start
 
 ```bash
-dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 2.0.1
-dotnet add package Boutquin.MarketData.DependencyInjection --version 2.0.1
+dotnet add package Boutquin.MarketData.Adapter.Tiingo --version 3.0.0
+dotnet add package Boutquin.MarketData.DependencyInjection --version 3.0.0
 ```
 
 Install Fred and NewYorkFed at the same Adapter version to run the full example below.
@@ -65,7 +65,7 @@ Then fetch one symbol via `IDataPipeline` (the records do not contain a ticker):
 ```csharp
 var symbol = new Symbol("AAPL");
 var result = await pipeline.ExecuteAsync<PriceHistoryRequest, Bar>(
-    new PriceHistoryRequest([symbol], dateRange),
+    new PriceHistoryRequest([symbol], dateRange) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis },
     cancellationToken);
 
 foreach (var bar in result.Payload)
@@ -84,11 +84,11 @@ dotnet format Boutquin.MarketData.Adapter.slnx --verify-no-changes
 
 ### Qualified dependency setup
 
-Use the SDK selected by `global.json` and [runner dependencies](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/docs/runner-dependencies.md). All packages restore from NuGet.org. `Directory.Packages.props` records the exact kernel version and public source commit; `dependency-source.json` pins signed upstream archives. Never rebuild an accepted package identity.
+Use the SDK selected by `global.json` and [runner dependencies](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/runner-dependencies.md). Builds restore the signed MarketData `3.0.0` kernel and its published dependencies from NuGet.org. `Directory.Packages.props` records the exact kernel version and public source revision; `dependency-source.json` binds signed archive, content and payload hashes. Never rebuild an accepted package identity.
 
 ## Documentation
 
-- [Adapter Reference](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/docs/adapters.md) — per-adapter configuration, auth, publication lag, and data-quality notes
+- [Adapter Reference](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/adapters.md) — per-adapter configuration, auth, publication lag, and data-quality notes
 
 ## Disclaimer
 
@@ -98,6 +98,8 @@ Boutquin.MarketData.Adapter is open-source software provided under the Apache 2.
 
 ## License
 
-Licensed under the [Apache License, Version 2.0](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v2.0.1/LICENSE.txt).
+Licensed under the [Apache License, Version 2.0](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/LICENSE.txt).
 
 Copyright (c) 2026 Pierre G. Boutquin. All rights reserved.
+
+Price requests require an explicit `PriceBasis`. The Tiingo and Twelve Data bases differ; automatic fallback never crosses that boundary. See [migration to 3.0](https://github.com/boutquin/Boutquin.MarketData.Adapter/blob/v3.0.0/docs/migration-3.0.md).

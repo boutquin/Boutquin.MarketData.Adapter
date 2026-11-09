@@ -20,6 +20,7 @@ using System.Text.Json;
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Diagnostics;
+using Boutquin.MarketData.Abstractions.Exceptions;
 using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.ReferenceData;
@@ -103,7 +104,7 @@ namespace Boutquin.MarketData.Adapter.TwelveData;
 /// <see cref="DataIssue"/> entries; caller cancellation propagates.
 /// </para>
 /// </remarks>
-public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryRequest, Bar>, IPrioritizedAdapter
+public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryRequest, Bar>, IPrioritizedAdapter, IPriceBasisAdapter
 {
     private readonly IHttpDataTransport _transport;
     private readonly IRawDocumentStore _rawStore;
@@ -144,6 +145,13 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
     /// <summary>The fallback rank, 50; adapters with higher ranks are attempted first.</summary>
     public int Priority => 50;
 
+    /// <summary>The exact price convention this adapter always delivers, independent of the requested basis.</summary>
+    /// <remarks>Adjusted close uses AdapterComputed; OHLC adjustment is Splits. A different requested basis is refused before I/O.</remarks>
+    public static PriceBasis DeliveredPriceBasis { get; } = new(PriceAdjustment.All, AdjustedCloseSource.AdapterComputed, PriceAdjustment.Splits);
+
+    /// <summary>The declared convention stamped on every price provenance entry.</summary>
+    public PriceBasis DeliveredBasis => DeliveredPriceBasis;
+
     /// <summary>
     /// Listing venues TwelveData covers for this adapter's role in the orchestrator:
     /// CA primary (XTSE, NEOE) and US fallback (XNYS, XNAS) — the four venues the
@@ -168,7 +176,8 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
     public bool CanHandle(PriceHistoryRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return request.Frequency == DataFrequency.Daily
+        return request.Basis == DeliveredBasis
+            && request.Frequency == DataFrequency.Daily
             && request.Symbols.Count == 1
             && (request.Exchange is null || s_supportedExchanges.Contains(request.Exchange.Value));
     }
@@ -178,6 +187,7 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
     /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
     /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
     /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="PriceBasisNotSupportedException">The requested basis differs from <see cref="DeliveredBasis"/>; no transport call is made.</exception>
     /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
     /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<Bar>>> FetchAsync(
@@ -185,6 +195,11 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.Basis != DeliveredBasis)
+        {
+            throw new PriceBasisNotSupportedException(request.Basis, [DeliveredBasis]);
+        }
+
         if (!CanHandle(request))
         {
             throw new ArgumentException("Twelve Data price fetches require one symbol, daily frequency, and a supported venue. Partition batches before dispatch.", nameof(request));
@@ -411,7 +426,8 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
                 Freshness: FreshnessClass.EndOfDay,
                 RetrievedAtUtc: _clock.UtcNow,
                 SourceUrl: $"{sourceUrl}&format=JSON",
-                DataDate: pageBars.Count > 0 ? pageBars.Max(b => b.Date) : null));
+                DataDate: pageBars.Count > 0 ? pageBars.Max(b => b.Date) : null)
+            { PriceBasis = DeliveredBasis });
 
             if (pageBars.Count == 0)
             {
@@ -703,7 +719,8 @@ public sealed class TwelveDataPriceBarAdapter : IDataSourceAdapter<PriceHistoryR
         Freshness: FreshnessClass.EndOfDay,
         RetrievedAtUtc: _clock.UtcNow,
         SourceUrl: $"{sourceUrl}&format=JSON",
-        DataDate: dataDate);
+        DataDate: dataDate)
+    { PriceBasis = DeliveredBasis };
 
     private static string MicCodeParam(ExchangeCode? exchange) =>
         exchange is null ? string.Empty : $"&mic_code={exchange.Value}";

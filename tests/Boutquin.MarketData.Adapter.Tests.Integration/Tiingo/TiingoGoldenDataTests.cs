@@ -48,7 +48,8 @@ public sealed class TiingoGoldenDataTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)));
+            new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         // Act
         var result = await adapter.FetchAsync(request, CancellationToken.None);

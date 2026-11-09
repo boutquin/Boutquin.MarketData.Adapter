@@ -20,6 +20,7 @@ using System.Text.Json;
 using Boutquin.MarketData.Abstractions.Calendars;
 using Boutquin.MarketData.Abstractions.Contracts;
 using Boutquin.MarketData.Abstractions.Diagnostics;
+using Boutquin.MarketData.Abstractions.Exceptions;
 using Boutquin.MarketData.Abstractions.Provenance;
 using Boutquin.MarketData.Abstractions.Records;
 using Boutquin.MarketData.Abstractions.ReferenceData;
@@ -57,7 +58,7 @@ namespace Boutquin.MarketData.Adapter.Tiingo;
 /// <see cref="DataIssue"/> entries; caller cancellation propagates.
 /// </para>
 /// </remarks>
-public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryRequest, Bar>, IPrioritizedAdapter
+public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryRequest, Bar>, IPrioritizedAdapter, IPriceBasisAdapter
 {
     private readonly IHttpDataTransport _transport;
     private readonly IRawDocumentStore _rawStore;
@@ -97,6 +98,13 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
     /// <summary>The fallback rank, 100; adapters with higher ranks are attempted first.</summary>
     public int Priority => 100;
 
+    /// <summary>The exact price convention this adapter always delivers, independent of the requested basis.</summary>
+    /// <remarks>Adjusted close uses ProviderSupplied; OHLC adjustment is None. A different requested basis is refused before I/O.</remarks>
+    public static PriceBasis DeliveredPriceBasis { get; } = new(PriceAdjustment.All, AdjustedCloseSource.ProviderSupplied, PriceAdjustment.None);
+
+    /// <summary>The declared convention stamped on every price provenance entry.</summary>
+    public PriceBasis DeliveredBasis => DeliveredPriceBasis;
+
     /// <summary>
     /// Listing venues Tiingo's daily-price feed covers for this adapter's role in the
     /// orchestrator: US equities and ETFs only. A request whose <see cref="PriceHistoryRequest.Exchange"/>
@@ -116,7 +124,8 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
     public bool CanHandle(PriceHistoryRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return request.Frequency == DataFrequency.Daily
+        return request.Basis == DeliveredBasis
+            && request.Frequency == DataFrequency.Daily
             && request.Symbols.Count == 1
             && (request.Exchange is null || s_supportedExchanges.Contains(request.Exchange.Value));
     }
@@ -126,6 +135,7 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
     /// <param name="cancellationToken">Cancels transport, raw-payload persistence and parsing where those operations support cancellation.</param>
     /// <returns>A task yielding canonical records together with provider provenance, coverage and data-quality issues. Empty or partial responses retain their failure or coverage information.</returns>
     /// <exception cref="ArgumentNullException">The request is null.</exception>
+    /// <exception cref="PriceBasisNotSupportedException">The requested basis differs from <see cref="DeliveredBasis"/>; no transport call is made.</exception>
     /// <exception cref="OperationCanceledException">The caller or a dependency cancels the operation.</exception>
     /// <remarks>Successful fetches include raw-payload persistence and normalization. Inspect the envelope's issues and coverage before using its records; a returned envelope alone does not certify complete data.</remarks>
     public async Task<DataEnvelope<IReadOnlyList<Bar>>> FetchAsync(
@@ -133,6 +143,11 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.Basis != DeliveredBasis)
+        {
+            throw new PriceBasisNotSupportedException(request.Basis, [DeliveredBasis]);
+        }
+
         if (!CanHandle(request))
         {
             throw new ArgumentException("Tiingo price fetches require one symbol, daily frequency, and a supported venue. Partition batches before dispatch.", nameof(request));
@@ -193,7 +208,8 @@ public sealed class TiingoPriceBarAdapter : IDataSourceAdapter<PriceHistoryReque
                     Freshness: FreshnessClass.EndOfDay,
                     RetrievedAtUtc: _clock.UtcNow,
                     SourceUrl: url,
-                    DataDate: bars.Count > 0 ? bars.Max(b => b.Date) : null));
+                    DataDate: bars.Count > 0 ? bars.Max(b => b.Date) : null)
+                { PriceBasis = DeliveredBasis });
             }
             catch (OperationCanceledException)
             {

@@ -441,7 +441,7 @@ public sealed class TiingoDividendHistoryPipelineTests : IDisposable
         IReadOnlyList<DataIssue> issues;
         if (kind == "price")
         {
-            var result = await pipeline.ExecuteAsync<PriceHistoryRequest, Bar>(new PriceHistoryRequest(symbols, range));
+            var result = await pipeline.ExecuteAsync<PriceHistoryRequest, Bar>(new PriceHistoryRequest(symbols, range) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis });
             result.Payload.Should().BeEmpty();
             issues = result.Issues;
         }

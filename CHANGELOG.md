@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-11-08
+
+Release documentation date; publication remains a separate authorized step.
+
+### Breaking
+- Price requests require an explicit validated `PriceBasis` and cache identity includes its stable token.
+- Tiingo declares `all.provider.none`; Twelve Data declares `all.computed.splits`. Unsupported bases are refused before HTTP and cannot fall back across conventions.
+- Price adapter decorators must implement `IPriceBasisAdapter` and forward the wrapped declaration.
+
+### Changed
+- Every successful price provenance entry states the adapter's delivered basis. Numerical payloads, provider adjustment URLs and raw-document keys retain their established behavior.
+- Uses the MarketData 3.0 kernel contract and major-line assembly/file version 3.0.0.0.
+
 ## [2.0.1] — 2026-11-02
 
 The first stable release after 2.0.0-rc.20261027.4. A 2.0.0 stable was prepared but never published, so its changes (listed below under 2.0.0) ship here. Requires MarketData kernel 2.0.1, published to nuget.org from source `e6079f9`.

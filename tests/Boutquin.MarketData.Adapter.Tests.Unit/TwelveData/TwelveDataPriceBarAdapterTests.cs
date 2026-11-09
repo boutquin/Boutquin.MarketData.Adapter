@@ -65,21 +65,21 @@ public sealed class TwelveDataPriceBarAdapterTests
     [Fact]
     public void CanHandle_returns_true_for_daily_with_symbols()
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Daily);
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Daily) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
     [Fact]
     public void CanHandle_returns_false_for_non_daily_frequency()
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Weekly);
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Weekly) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
     [Fact]
     public void Empty_symbols_are_rejected_at_the_request_boundary()
     {
-        Action act = () => new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily);
+        Action act = () => new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         act.Should().Throw<ArgumentOutOfRangeException>()
             .Which.ParamName.Should().Be("symbols.Count");
@@ -90,7 +90,7 @@ public sealed class TwelveDataPriceBarAdapterTests
     [Fact]
     public void CanHandle_returns_true_when_Exchange_is_null_preserving_back_compat()
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
@@ -103,7 +103,7 @@ public sealed class TwelveDataPriceBarAdapterTests
     {
         // TwelveData covers CA primary (XTSE, NEOE) and US fallback (XNYS, XNAS); these
         // are the venues the etfwealthiq universe CSV declares.
-        var request = new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = exchange };
+        var request = new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = exchange };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
@@ -116,7 +116,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         // TwelveData covers many global venues commercially, but this adapter's role in
         // the etfwealthiq pipeline is CA primary + US fallback; broader support should
         // be opted in explicitly when needed.
-        var request = new PriceHistoryRequest([new Symbol("BARC")], MakeRange()) { Exchange = exchange };
+        var request = new PriceHistoryRequest([new Symbol("BARC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = exchange };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
@@ -132,7 +132,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var rawStore = new FakeRawDocumentStore();
         var adapter = CreateAdapter(transport, rawStore);
 
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
         result.Payload.Should().ContainSingle();
@@ -155,7 +155,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         transport.RespondTo("twelvedata", json);
         var adapter = CreateAdapter(transport);
 
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
         result.Payload.Should().BeEmpty();
@@ -169,7 +169,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         // No response for AAPL — will throw
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Payload.Should().BeEmpty();
         result.Issues.Should().ContainSingle(issue => issue.Code == new IssueCode("FETCH_FAILED"));
@@ -183,7 +183,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         transport.RespondTo("twelvedata", json);
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("X")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("X")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         // One price page and one dividends request.
         result.Provenance.Should().HaveCount(2).And.OnlyContain(p => p.Provider == new ProviderCode("twelvedata"));
@@ -197,7 +197,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("time_series", TimeSeriesSingleBar);
         var result = await CreateAdapter(transport).FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()), CancellationToken.None);
+            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         transport.RequestedUris[0].Query.Should().Contain("apikey=test-key");
         result.Provenance.Should().NotBeEmpty().And.OnlyContain(p => !p.SourceUrl!.Contains("test-key"));
@@ -210,8 +210,8 @@ public sealed class TwelveDataPriceBarAdapterTests
         transport.RespondTo("time_series", TimeSeriesSingleBar);
         var rawStore = new FakeRawDocumentStore();
         var adapter = CreateAdapter(transport, rawStore);
-        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.XTSE });
-        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.NEOE });
+        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE });
+        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.NEOE });
 
         // One price page and one dividends payload per venue.
         rawStore.SavedKeys.Should().HaveCount(4).And.OnlyHaveUniqueItems();
@@ -227,7 +227,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         Func<Task> act = () => adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()), source.Token);
+            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }, source.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -244,7 +244,8 @@ public sealed class TwelveDataPriceBarAdapterTests
         });
         var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest(
             [new Symbol("MSFT")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12))));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis });
 
         result.Coverage.RequestedPoints.Should().Be(5);
         result.Coverage.ReturnedPoints.Should().Be(1);
@@ -260,7 +261,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var result = await adapter.FetchAsync(new PriceHistoryRequest(
             [new Symbol("XIC")],
             new DateRange(new DateOnly(2024, 7, 1), new DateOnly(2024, 7, 2)))
-        { Exchange = ExchangeCode.XTSE });
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE });
 
         result.Coverage.RequestedPoints.Should().Be(1);
         result.Coverage.Status.Should().Be(CompletenessStatus.Complete);
@@ -283,7 +284,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.XTSE },
+            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE },
             CancellationToken.None);
 
         transport.RequestedUris[0].Query.Should().Contain("mic_code=XTSE");
@@ -295,7 +296,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("time_series", TimeSeriesSingleBar);
         await CreateAdapter(transport).FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC&mic_code=XNAS")], MakeRange()) { Exchange = ExchangeCode.XTSE },
+            new PriceHistoryRequest([new Symbol("XIC&mic_code=XNAS")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE },
             CancellationToken.None);
 
         var query = System.Web.HttpUtility.ParseQueryString(transport.RequestedUris[0].Query);
@@ -315,7 +316,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = ExchangeCode.XTSE },
+            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE },
             CancellationToken.None);
 
         var query = System.Web.HttpUtility.ParseQueryString(transport.RequestedUris[0].Query);
@@ -329,7 +330,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         transport.RespondTo("time_series", TimeSeriesSingleBar);
         var adapter = CreateAdapter(transport);
 
-        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         transport.RequestedUris[0].Query.Should().NotContain("mic_code");
     }
@@ -347,7 +348,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = exchange },
+            new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = exchange },
             CancellationToken.None);
 
         transport.RequestedUris[0].Query.Should().Contain($"mic_code={expectedMicCode}");
@@ -410,7 +411,7 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var longRange = new DateRange(new DateOnly(2001, 2, 15), new DateOnly(2026, 4, 17));
         var result = await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("XIC")], longRange) { Exchange = ExchangeCode.XTSE },
+            new PriceHistoryRequest([new Symbol("XIC")], longRange) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis, Exchange = ExchangeCode.XTSE },
             CancellationToken.None);
 
         // Two requests issued (page 1 then page 2 with end_date = page1_first - 1 day).
@@ -437,7 +438,7 @@ public sealed class TwelveDataPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()),
+            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis },
             CancellationToken.None);
 
         transport.RequestedUris.Count.Should().Be(1);
@@ -472,7 +473,8 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -491,7 +493,8 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)));
+            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -511,7 +514,8 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 15), new DateOnly(2024, 1, 19)));
+            new DateRange(new DateOnly(2024, 1, 15), new DateOnly(2024, 1, 19)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -531,7 +535,8 @@ public sealed class TwelveDataPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -547,7 +552,8 @@ public sealed class TwelveDataPriceBarAdapterTests
         transport.RespondTo("time_series", TwelveDataValues("2024-01-05", "2024-01-02", "2024-01-01"));
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)));
+            new DateRange(new DateOnly(2024, 1, 2), new DateOnly(2024, 1, 4)))
+        { Basis = TwelveDataPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await CreateAdapter(transport).FetchAsync(request);
 

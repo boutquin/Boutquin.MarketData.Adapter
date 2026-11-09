@@ -65,21 +65,21 @@ public sealed class TiingoPriceBarAdapterTests
     [Fact]
     public void CanHandle_returns_true_for_daily_with_symbols()
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Daily);
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Daily) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
     [Fact]
     public void CanHandle_returns_false_for_non_daily_frequency()
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Weekly);
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange(), DataFrequency.Weekly) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
     [Fact]
     public void Empty_symbols_are_rejected_at_the_request_boundary()
     {
-        Action act = () => new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily);
+        Action act = () => new PriceHistoryRequest([], MakeRange(), DataFrequency.Daily) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         act.Should().Throw<ArgumentOutOfRangeException>()
             .Which.ParamName.Should().Be("symbols.Count");
@@ -92,7 +92,7 @@ public sealed class TiingoPriceBarAdapterTests
     {
         // Callers that do not set Exchange must continue to work — this keeps every
         // existing consumer unaffected by the 1.1.0 Exchange-hint addition.
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
@@ -101,7 +101,7 @@ public sealed class TiingoPriceBarAdapterTests
     [InlineData(ExchangeCode.XNAS)]
     public void CanHandle_returns_true_for_supported_US_exchanges(ExchangeCode exchange)
     {
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Exchange = exchange };
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis, Exchange = exchange };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeTrue();
     }
 
@@ -117,7 +117,7 @@ public sealed class TiingoPriceBarAdapterTests
         // with iShares S&P/TSX Capped Composite ETF. With the Exchange hint set to XTSE,
         // the adapter now self-excludes from CanHandle and the orchestrator routes to
         // TwelveData instead of returning garbage.
-        var request = new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Exchange = exchange };
+        var request = new PriceHistoryRequest([new Symbol("XIC")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis, Exchange = exchange };
         CreateAdapter(new FakeHttpDataTransport()).CanHandle(request).Should().BeFalse();
     }
 
@@ -136,7 +136,7 @@ public sealed class TiingoPriceBarAdapterTests
         var rawStore = new FakeRawDocumentStore();
         var adapter = CreateAdapter(transport, rawStore);
 
-        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange());
+        var request = new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
         result.Payload.Should().HaveCount(2);
@@ -156,7 +156,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport, rawStore);
 
         Func<Task> act = () => adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis },
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>()
@@ -173,7 +173,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport, rawStore);
 
         Func<Task> act = () => adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol(new string('A', 251))], MakeRange()),
+            new PriceHistoryRequest([new Symbol(new string('A', 251))], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis },
             CancellationToken.None);
 
         await act.Should().ThrowExactlyAsync<ArgumentException>()
@@ -191,7 +191,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         var result = await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis },
             CancellationToken.None);
 
         transport.RequestedUris.Should().ContainSingle();
@@ -208,7 +208,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()),
+            new PriceHistoryRequest([new Symbol(ticker)], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis },
             CancellationToken.None);
 
         transport.RequestedUris.Should().ContainSingle()
@@ -231,7 +231,7 @@ public sealed class TiingoPriceBarAdapterTests
 
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("tiingo/daily/AAPL", json);
-        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Payload.Should().BeEmpty();
         result.Issues.Should().ContainSingle(i => i.Code == new IssueCode("FETCH_FAILED")).Which.Message
@@ -247,7 +247,7 @@ public sealed class TiingoPriceBarAdapterTests
 
         var transport = new FakeHttpDataTransport();
         transport.RespondTo("tiingo/daily/AAPL", json);
-        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        var result = await CreateAdapter(transport).FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Issues.Should().NotContain(i => i.Code == new IssueCode("FETCH_FAILED"));
         result.Payload.Should().ContainSingle().Which.Should().Match<Bar>(
@@ -265,7 +265,7 @@ public sealed class TiingoPriceBarAdapterTests
         transport.RespondTo("tiingo/daily/AAPL", json);
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Payload[0].Volume.Should().Be(0);
     }
@@ -277,7 +277,7 @@ public sealed class TiingoPriceBarAdapterTests
         // No response for AAPL — will throw HttpRequestException
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Payload.Should().BeEmpty();
         result.Issues.Should().ContainSingle(issue => issue.Code == new IssueCode("FETCH_FAILED"));
@@ -293,7 +293,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         Func<Task> act = () => adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), cancellation.Token);
+            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, cancellation.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -306,7 +306,7 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
 
         var result = await adapter.FetchAsync(
-            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()), CancellationToken.None);
+            new PriceHistoryRequest([new Symbol("AAPL")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Issues.Should().ContainSingle(issue => issue.Code == new IssueCode("FETCH_FAILED"))
             .Which.Message.Should().Be("Failed to fetch data for symbol 'AAPL'.");
@@ -320,7 +320,7 @@ public sealed class TiingoPriceBarAdapterTests
         transport.RespondTo("tiingo", json);
         var adapter = CreateAdapter(transport);
 
-        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("X")], MakeRange()), CancellationToken.None);
+        var result = await adapter.FetchAsync(new PriceHistoryRequest([new Symbol("X")], MakeRange()) { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis }, CancellationToken.None);
 
         result.Provenance.Should().ContainSingle();
         result.Provenance[0].Provider.Should().Be(new ProviderCode("tiingo"));
@@ -356,7 +356,8 @@ public sealed class TiingoPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -376,7 +377,8 @@ public sealed class TiingoPriceBarAdapterTests
         var adapter = CreateAdapter(transport);
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -394,7 +396,8 @@ public sealed class TiingoPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)));
+            new DateRange(new DateOnly(2024, 1, 6), new DateOnly(2024, 1, 7)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -416,7 +419,8 @@ public sealed class TiingoPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 15), new DateOnly(2024, 1, 19)));
+            new DateRange(new DateOnly(2024, 1, 15), new DateOnly(2024, 1, 19)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 
@@ -436,7 +440,8 @@ public sealed class TiingoPriceBarAdapterTests
 
         var request = new PriceHistoryRequest(
             [new Symbol("AAPL")],
-            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)));
+            new DateRange(new DateOnly(2024, 1, 8), new DateOnly(2024, 1, 12)))
+        { Basis = TiingoPriceBarAdapter.DeliveredPriceBasis };
 
         var result = await adapter.FetchAsync(request, CancellationToken.None);
 

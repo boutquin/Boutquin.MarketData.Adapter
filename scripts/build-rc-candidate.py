@@ -19,10 +19,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', required=True)
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--version', required=True, help='Never previously accepted 2.0.0/2.0.1 stable or numeric RC version')
+    parser.add_argument('--version', required=True, help='Never previously accepted exact stable or numeric RC version')
     args = parser.parse_args()
-    if not re.fullmatch(r'2\.0\.[01](?:-rc\.[0-9]+(?:\.[0-9]+)*)?', args.version):
-        parser.error('Expected exact 2.0.0/2.0.1 or matching numeric RC identity')
+    if not re.fullmatch(r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-rc\.[0-9]+(?:\.[0-9]+)*)?', args.version):
+        parser.error('Expected exact stable or numeric RC identity')
     if not re.fullmatch('[0-9a-f]{40}', args.source):
         parser.error('source must be a full committed SHA')
     output = args.output.resolve()
@@ -48,6 +48,10 @@ def main():
     run(['git', 'checkout', '--detach', args.source], source)
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=source).strip():
         raise SystemExit('Candidate source clone is not clean')
+    run(['python3', 'scripts/check-api-release-baseline.py', '--release'], source)
+    if '-' not in version:
+
+        run(['python3', 'scripts/check-release-docs.py', version], source)
     run(['python3', 'scripts/check-runner-dependencies.py'], source)
     config = 'nuget.ci.config'
     if os.environ.get('BOUTQUIN_PREPARED_FEED'):

@@ -15,7 +15,7 @@
     <RepositoryUrl>https://github.com/boutquin/Boutquin.MarketData.Adapter</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <MinVerTagPrefix>v</MinVerTagPrefix>
-    <MinVerMinimumMajorMinor>2.0</MinVerMinimumMajorMinor>
+    <MinVerMinimumMajorMinor>3.0</MinVerMinimumMajorMinor>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Copyright>Copyright © 2026, Boutquin Computer Consulting. All rights reserved.</Copyright>
     <NeutralLanguage>en</NeutralLanguage>

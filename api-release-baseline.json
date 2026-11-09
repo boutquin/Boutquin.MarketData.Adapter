@@ -1,0 +1,17 @@
+{
+  "version": "3.0.0",
+  "packages": {
+    "BankOfCanada": "b91fc1181095d4fecf01987d8c80abb7856c1528941d16da9fe1e1040efe1957",
+    "BankOfEngland": "934fac550330e9a44ab350b702b0e349b7a87c7120f7316948af0207b9b7ff79",
+    "Cme": "bd7e077304bf1f594dec9bfc662cfb2b2385aedf18b1df6648ee3e14df644806",
+    "Ecb": "85e0a764cd1da92c0192714d4dc913791f373b1974ddb6efe66e45abf78f04c2",
+    "FamaFrench": "20c3a95340dde080e292f2f79c195c79a0bf32f58846aab94741a1cbfa411db6",
+    "Frankfurter": "7e1e3c323bea6c0e56d819c5a46aff5e030a6e94293a13d42bc02300c4ee2f56",
+    "Fred": "bc72f9096af74aaf7b4dbc432a29773ac99f3d31ca0fb9c6781eb14d7e660aac",
+    "NewYorkFed": "a79e673f1a268a6d38674a159fda8b8eb6998eeea3d11fe540c4ead986e73108",
+    "Shared": "65e9fadae472bb184dfb99cc3318f695e8dadfca141aa4e6c165a0614befa1ca",
+    "Tiingo": "9aa83ae1a0e1f892df012acbd1d9a4847be012bdfd566e35e72eb10e6470d195",
+    "TwelveData": "b8232ed639f8b13b870c641e7b13059a893733a12ffe223355fbbbbd1a329aeb",
+    "UsTreasury": "ea2f71ace5f72b245f2375306590ebae85f3898e06453d62c1349005fe46dabc"
+  }
+}

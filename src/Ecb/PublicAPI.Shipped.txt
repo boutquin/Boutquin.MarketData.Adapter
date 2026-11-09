@@ -11,3 +11,5 @@ Boutquin.MarketData.Adapter.Ecb.EcbOptions.EstrSeriesKey.get -> string!
 Boutquin.MarketData.Adapter.Ecb.EcbOptions.EstrSeriesKey.set -> void
 Boutquin.MarketData.Adapter.Ecb.ServiceCollectionExtensions
 static Boutquin.MarketData.Adapter.Ecb.ServiceCollectionExtensions.AddMarketDataEcb(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Boutquin.MarketData.Adapter.Ecb.EcbOptions!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter.EcbEstrAdapter(Boutquin.MarketData.Transport.Http.IHttpDataTransport! transport, Boutquin.MarketData.Abstractions.Contracts.IRawDocumentStore! rawStore, Boutquin.MarketData.Abstractions.Contracts.IClock! clock, Boutquin.MarketData.Abstractions.Calendars.IBusinessCalendar! calendar, Microsoft.Extensions.Options.IOptions<Boutquin.MarketData.Adapter.Ecb.EcbOptions!>! options, Microsoft.Extensions.Logging.ILogger<Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter!>! logger) -> void
+Boutquin.MarketData.Adapter.Ecb.EcbEstrAdapter.ProviderKey.get -> Boutquin.MarketData.Abstractions.Provenance.ProviderCode

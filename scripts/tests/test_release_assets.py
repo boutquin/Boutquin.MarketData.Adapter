@@ -31,7 +31,7 @@ class ReleaseAssetTests(unittest.TestCase):
                 check.validate(feed, tag, digest, "a" * 40)
 
     def test_stable_and_rc_identity_cross_product(self):
-        for version in ('2.0.0', '2.0.0-rc.20261027.4', '2.0.1', '2.0.1-rc.20261030.1'):
+        for version in ("3.0.0", '2.0.0', '2.0.0-rc.20261027.4', '2.0.1', '2.0.1-rc.20261030.1'):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as d:
                 feed = Path(d)
                 package = feed / 'example.nupkg'
@@ -42,7 +42,7 @@ class ReleaseAssetTests(unittest.TestCase):
                 manifest.write_text(json.dumps(identity))
                 digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
                 self.assertEqual(manifest, check.validate(feed, 'v' + version, digest, 'a' * 40))
-                for tag in ('v2.0.0', 'v2.0.0-rc.20261027.4', 'v2.0.1', 'v2.0.1-rc.20261030.1', 'v2.0.2', 'v2.0.1-beta.1', 'v2.0.0-beta.1',
+                for tag in ("v3.0.0", 'v2.0.0', 'v2.0.0-rc.20261027.4', 'v2.0.1', 'v2.0.1-rc.20261030.1', 'v2.0.2', 'v2.0.1-beta.1', 'v2.0.0-beta.1',
                             'v2.0.0+metadata', 'v2.0.0-rc.', 'v2.0.0-rc.1/../../x', '2.0.0'):
                     if tag != 'v' + version:
                         with self.assertRaises(ValueError):
