@@ -16,9 +16,9 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.403" />
 
     <!-- Adapter runtime dependencies -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="11.0.0" />
 
     <!-- Core MarketData packages -->
     <PackageVersion Include="Boutquin.Domain" Version="1.0.1" />
