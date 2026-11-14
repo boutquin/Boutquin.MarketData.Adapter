@@ -223,7 +223,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -235,7 +235,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -247,7 +247,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -259,7 +259,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -271,7 +271,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -283,7 +283,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -295,7 +295,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -307,7 +307,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -327,7 +327,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -339,7 +339,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -351,7 +351,7 @@
           "Boutquin.MarketData.Adapter.Shared": "[1.0.0, )",
           "Boutquin.MarketData.Storage": "[3.0.0, )",
           "Boutquin.MarketData.Transport": "[3.0.0, )",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[11.0.0, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.14, )",
           "Microsoft.Extensions.Options": "[10.0.14, )"
         }
@@ -406,9 +406,9 @@
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "QtpQzuSZVyTPCuHW058yCs9Nj0394uUkNyFHS813nOmK9UgUdBdaprJ5PPsBgsQIpxADTsTkbaMMonykem6qdw=="
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "a2c4Kp55miXT6G+DSb75pczXQJHgNMzPyZEyMxrrKxuQrgvctcDWJWD9fVe/uGbQdu4Z0c3B7AVKp1DXmD64nQ=="
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "CentralTransitive",
