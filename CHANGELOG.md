@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- .NET 11 builds alongside .NET 10, with target-specific stable dependency versions and tests for both frameworks.
+
+
 ## [3.0.0] — 2026-11-08
 
 Published to NuGet.org from the qualified immutable release archives.
