@@ -89,7 +89,7 @@ def verify(feed, packages=None):
     if len(declared) != len(all_packages):
         raise ValueError("Duplicate dependency identities")
     for item in central.iter("PackageVersion"):
-        name = item.attrib["Include"]
+        name = (item.get("Include") or item.get("Update"))
         if name.startswith("Boutquin.MarketData."):
             pin = item.attrib["Version"].replace("$(MarketDataKernelVersion)", version)
             if declared.get(name) != pin:
